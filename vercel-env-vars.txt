@@ -1,0 +1,9 @@
+# Vercel Environment Variables Template
+# Copy these values to your Vercel project settings
+
+DATABASE_URL="postgresql://placeholder:placeholder@placeholder.placeholder.com/placeholder"
+NEXT_PUBLIC_APP_URL="https://figma-stocktake-nextjs.vercel.app"
+NEXT_PUBLIC_APP_NAME="StockTake Pro"
+NEXT_PUBLIC_APP_VERSION="1.0.0"
+PRISMA_GENERATE_DATAPROXY="false"
+NODE_ENV="production"
