@@ -144,63 +144,67 @@ export default function SessionItemsSummary({ items, onItemClick }: SessionItems
             </div>
           </div>
 
-          {/* Filters and Controls */}
-          <div className="d-flex flex-wrap gap-2 mb-3">
-            <div className="btn-group" role="group">
-              <button
-                className={`btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
-                onClick={() => setFilterStatus('all')}
-              >
-                All ({stats.total})
-              </button>
-              <button
-                className={`btn btn-sm ${filterStatus === 'not-counted' ? 'btn-warning' : 'btn-outline-warning'}`}
-                onClick={() => setFilterStatus('not-counted')}
-              >
-                Not Counted ({stats.notCounted})
-              </button>
-              <button
-                className={`btn btn-sm ${filterStatus === 'counting' ? 'btn-info' : 'btn-outline-info'}`}
-                onClick={() => setFilterStatus('counting')}
-              >
-                In Progress ({stats.counting})
-              </button>
-              <button
-                className={`btn btn-sm ${filterStatus === 'complete' ? 'btn-success' : 'btn-outline-success'}`}
-                onClick={() => setFilterStatus('complete')}
-              >
-                Complete ({stats.complete})
-              </button>
-            </div>
-            
-            <div className="btn-group ms-auto" role="group">
-              <button
-                className={`btn btn-sm ${sortBy === 'sku' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                onClick={() => setSortBy('sku')}
-              >
-                <i className="bi bi-sort-alpha-down me-1"></i>
-                SKU
-              </button>
-              <button
-                className={`btn btn-sm ${sortBy === 'status' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                onClick={() => setSortBy('status')}
-              >
-                <i className="bi bi-sort-down me-1"></i>
-                Status
-              </button>
-              <button
-                className={`btn btn-sm ${sortBy === 'counts' ? 'btn-secondary' : 'btn-outline-secondary'}`}
-                onClick={() => setSortBy('counts')}
-              >
-                <i className="bi bi-sort-numeric-down me-1"></i>
-                Counts
-              </button>
-            </div>
-          </div>
+                 {/* Filters and Controls - Responsive */}
+                 <div className="d-flex flex-column flex-lg-row gap-2 mb-3">
+                   <div className="btn-group flex-wrap" role="group">
+                     <button
+                       className={`btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                       onClick={() => setFilterStatus('all')}
+                     >
+                       <span className="d-none d-sm-inline">All ({stats.total})</span>
+                       <span className="d-inline d-sm-none">All</span>
+                     </button>
+                     <button
+                       className={`btn btn-sm ${filterStatus === 'not-counted' ? 'btn-warning' : 'btn-outline-warning'}`}
+                       onClick={() => setFilterStatus('not-counted')}
+                     >
+                       <span className="d-none d-sm-inline">Not Counted ({stats.notCounted})</span>
+                       <span className="d-inline d-sm-none">Pending</span>
+                     </button>
+                     <button
+                       className={`btn btn-sm ${filterStatus === 'counting' ? 'btn-info' : 'btn-outline-info'}`}
+                       onClick={() => setFilterStatus('counting')}
+                     >
+                       <span className="d-none d-sm-inline">In Progress ({stats.counting})</span>
+                       <span className="d-inline d-sm-none">Progress</span>
+                     </button>
+                     <button
+                       className={`btn btn-sm ${filterStatus === 'complete' ? 'btn-success' : 'btn-outline-success'}`}
+                       onClick={() => setFilterStatus('complete')}
+                     >
+                       <span className="d-none d-sm-inline">Complete ({stats.complete})</span>
+                       <span className="d-inline d-sm-none">Done</span>
+                     </button>
+                   </div>
+                   
+                   <div className="btn-group flex-wrap" role="group">
+                     <button
+                       className={`btn btn-sm ${sortBy === 'sku' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                       onClick={() => setSortBy('sku')}
+                     >
+                       <i className="bi bi-sort-alpha-down me-1"></i>
+                       <span className="d-none d-sm-inline">SKU</span>
+                     </button>
+                     <button
+                       className={`btn btn-sm ${sortBy === 'status' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                       onClick={() => setSortBy('status')}
+                     >
+                       <i className="bi bi-sort-down me-1"></i>
+                       <span className="d-none d-sm-inline">Status</span>
+                     </button>
+                     <button
+                       className={`btn btn-sm ${sortBy === 'counts' ? 'btn-secondary' : 'btn-outline-secondary'}`}
+                       onClick={() => setSortBy('counts')}
+                     >
+                       <i className="bi bi-sort-numeric-down me-1"></i>
+                       <span className="d-none d-sm-inline">Counts</span>
+                     </button>
+                   </div>
+                 </div>
         </div>
       </div>
 
-      {/* Items List */}
+      {/* Items List - Responsive */}
       <div className="row g-3">
         {filteredItems.map((item) => {
           const { label, variant } = getItemStatus(item)
@@ -208,7 +212,7 @@ export default function SessionItemsSummary({ items, onItemClick }: SessionItems
           const isExpanded = expandedItem === item.id
 
           return (
-            <div key={item.id} className="col-lg-6 col-xl-4">
+            <div key={item.id} className="col-12 col-sm-6 col-lg-4 col-xl-3">
               <div 
                 className={`card card-enhanced h-100 ${onItemClick ? 'cursor-pointer' : ''}`}
                 onClick={() => onItemClick?.(item)}

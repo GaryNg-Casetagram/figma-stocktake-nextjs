@@ -182,39 +182,47 @@ export default function SessionSummaryPage({
   return (
     <Layout>
       <div className="animate-fade-in">
-        {/* Header */}
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div>
-            <h1 className="display-6 fw-bold gradient-text mb-2">
-              <i className={`bi ${isReceivingVerification ? 'bi-truck' : 'bi-clipboard-check'} me-3`}></i>
-              {session.name}
-            </h1>
-            <p className="text-muted lead mb-2">{session.description}</p>
-            <div className="d-flex align-items-center text-muted">
-              <i className="bi bi-geo-alt me-2"></i>
-              <span>{session.location.name} - {session.location.locale}</span>
-              <span className="mx-3">•</span>
-              <i className="bi bi-box me-2"></i>
-              <span>{session.items.length} items</span>
-            </div>
-          </div>
-          <div className="d-flex gap-2">
-            <Link
-              href={`/sessions/${session.id}/count`}
-              className="btn btn-gradient-success btn-lg"
-            >
-              <i className="bi bi-play-circle me-2"></i>
-              {isReceivingVerification ? 'Start Verification' : 'Start Counting'}
-            </Link>
-            <Link
-              href="/sessions"
-              className="btn btn-outline-secondary btn-lg"
-            >
-              <i className="bi bi-arrow-left me-2"></i>
-              Back to Sessions
-            </Link>
-          </div>
-        </div>
+               {/* Header - Responsive */}
+               <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4">
+                 <div className="mb-3 mb-lg-0 flex-grow-1">
+                   <h1 className="display-6 fw-bold gradient-text mb-2">
+                     <i className={`bi ${isReceivingVerification ? 'bi-truck' : 'bi-clipboard-check'} me-2 me-lg-3`}></i>
+                     <span className="d-none d-sm-inline">{session.name}</span>
+                     <span className="d-inline d-sm-none text-truncate">{session.name}</span>
+                   </h1>
+                   <p className="text-muted lead mb-2 d-none d-md-block">{session.description}</p>
+                   <p className="text-muted mb-2 d-block d-md-none">{session.description}</p>
+                   <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center text-muted">
+                     <div className="d-flex align-items-center mb-1 mb-sm-0">
+                       <i className="bi bi-geo-alt me-2"></i>
+                       <span className="text-truncate">{session.location.name} - {session.location.locale}</span>
+                     </div>
+                     <span className="d-none d-sm-inline mx-3">•</span>
+                     <div className="d-flex align-items-center">
+                       <i className="bi bi-box me-2"></i>
+                       <span>{session.items.length} items</span>
+                     </div>
+                   </div>
+                 </div>
+                 <div className="d-flex flex-column flex-sm-row gap-2 w-100 w-lg-auto">
+                   <Link
+                     href={`/sessions/${session.id}/count`}
+                     className="btn btn-gradient-success btn-lg order-1"
+                   >
+                     <i className="bi bi-play-circle me-2"></i>
+                     <span className="d-none d-sm-inline">{isReceivingVerification ? 'Start Verification' : 'Start Counting'}</span>
+                     <span className="d-inline d-sm-none">{isReceivingVerification ? 'Start Verify' : 'Start Count'}</span>
+                   </Link>
+                   <Link
+                     href="/sessions"
+                     className="btn btn-outline-secondary btn-lg order-2"
+                   >
+                     <i className="bi bi-arrow-left me-2"></i>
+                     <span className="d-none d-sm-inline">Back to Sessions</span>
+                     <span className="d-inline d-sm-none">Back</span>
+                   </Link>
+                 </div>
+               </div>
 
         {/* Receiving Verification Section */}
         {isReceivingVerification && (

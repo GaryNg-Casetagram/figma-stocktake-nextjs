@@ -88,14 +88,16 @@ export default function NewSessionPage() {
     <Layout>
       <div className="animate-fade-in">
         <div className="row justify-content-center">
-          <div className="col-lg-8 col-xl-6">
-            {/* Header */}
-            <div className="text-center mb-5">
-              <h1 className="display-6 fw-bold gradient-text mb-3">
-                <i className="bi bi-plus-circle me-3"></i>
-                Create New Session
+          <div className="col-12 col-md-10 col-lg-8 col-xl-6">
+            {/* Header - Responsive */}
+            <div className="text-center mb-4 mb-md-5">
+              <h1 className="display-6 fw-bold gradient-text mb-2 mb-md-3">
+                <i className="bi bi-plus-circle me-2 me-md-3"></i>
+                <span className="d-none d-sm-inline">Create New Session</span>
+                <span className="d-inline d-sm-none">New Session</span>
               </h1>
-              <p className="text-muted lead">Set up a new stock take session to begin counting inventory</p>
+              <p className="text-muted lead d-none d-md-block">Set up a new stock take session to begin counting inventory</p>
+              <p className="text-muted d-block d-md-none">Set up a new session</p>
             </div>
 
             {/* Form Card */}

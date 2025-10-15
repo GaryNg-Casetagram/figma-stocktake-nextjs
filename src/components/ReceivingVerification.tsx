@@ -111,28 +111,30 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="d-flex gap-2 mb-4">
+      {/* Action Buttons - Responsive */}
+      <div className="d-flex flex-column flex-sm-row gap-2 mb-4">
         <button 
-          className="btn btn-gradient-success btn-lg"
+          className="btn btn-gradient-success btn-lg flex-fill flex-sm-grow-0"
           onClick={handleBarcodeScan}
           disabled={pendingItems.length === 0}
         >
           <i className="bi bi-upc-scan me-2"></i>
-          Scan Barcode
+          <span className="d-none d-sm-inline">Scan Barcode</span>
+          <span className="d-inline d-sm-none">Scan</span>
         </button>
         <button 
-          className="btn btn-outline-primary btn-lg"
+          className="btn btn-outline-primary btn-lg flex-fill flex-sm-grow-0"
         >
           <i className="bi bi-list me-2"></i>
-          Manual Selection
+          <span className="d-none d-sm-inline">Manual Selection</span>
+          <span className="d-inline d-sm-none">Manual</span>
         </button>
       </div>
 
-      {/* Items Grid */}
+      {/* Items Grid - Responsive */}
       <div className="row g-3">
         {items.map((item) => (
-          <div key={item.id} className="col-lg-4 col-md-6">
+          <div key={item.id} className="col-12 col-sm-6 col-lg-4">
             <div 
               className={`card card-enhanced h-100 ${
                 item.status === 'verified' ? 'border-success' : 
