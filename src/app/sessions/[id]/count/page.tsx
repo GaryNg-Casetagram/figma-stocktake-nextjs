@@ -43,6 +43,9 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   const [showScanner, setShowScanner] = useState(false)
   const [autoSelectedSku, setAutoSelectedSku] = useState<string | null>(null)
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
+  const [showAddItemModal, setShowAddItemModal] = useState(false)
+  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([])
+  const [searchingGlobal, setSearchingGlobal] = useState(false)
 
   const fetchSession = useCallback(async () => {
     try {
@@ -126,7 +129,7 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     setShowScanner(true)
   }
 
-  const handleScanResult = (barcode: string) => {
+  const handleScanResult = async (barcode: string) => {
     setShowScanner(false)
     
     if (!session) return
@@ -171,14 +174,65 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       // Show success notification
       showNotification('success', `Item auto-selected: ${foundItem.item.sku}. Ready to count! Quantity set to 1.`)
     } else {
-      // Show error notification
-      const availableSkus = session.items.map(si => si.item.sku).join(', ')
-      showNotification('error', `Barcode "${barcode}" not found. Available SKUs: ${availableSkus}`)
+      // Item not found in session, search globally
+      showNotification('error', `Barcode "${barcode}" not found in session. Searching global database...`)
+      await handleGlobalSearch(barcode)
+      setShowAddItemModal(true)
     }
   }
 
   const handleScanError = (error: string) => {
     console.error('Barcode scan error:', error)
+  }
+
+  const handleGlobalSearch = async (query: string) => {
+    if (!query.trim()) {
+      setGlobalSearchResults([])
+      return
+    }
+
+    setSearchingGlobal(true)
+    try {
+      const response = await fetch(`/api/items/search?q=${encodeURIComponent(query)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setGlobalSearchResults(data.items)
+      } else {
+        showNotification('error', 'Failed to search items')
+      }
+    } catch (error) {
+      console.error('Global search error:', error)
+      showNotification('error', 'Failed to search items')
+    } finally {
+      setSearchingGlobal(false)
+    }
+  }
+
+  const handleAddItemToSession = async (itemSku: string) => {
+    if (!session) return
+
+    try {
+      const response = await fetch(`/api/sessions/${session.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, itemSku })
+      })
+
+      if (response.ok) {
+        showNotification('success', `Item "${itemSku}" added to session successfully`)
+        // Refresh session data
+        await fetchSession()
+        setShowAddItemModal(false)
+        setSearchTerm('')
+        setGlobalSearchResults([])
+      } else {
+        const errorData = await response.json()
+        showNotification('error', errorData.error || 'Failed to add item to session')
+      }
+    } catch (error) {
+      console.error('Add item error:', error)
+      showNotification('error', 'Failed to add item to session')
+    }
   }
 
   if (loading) {
@@ -280,6 +334,14 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
                       <i className="bi bi-upc-scan me-2"></i>
                       <span className="d-none d-sm-inline">Start Barcode Scan</span>
                       <span className="d-inline d-sm-none">Scan</span>
+                    </button>
+                    <button
+                      onClick={() => setShowAddItemModal(true)}
+                      className="btn btn-gradient-primary"
+                    >
+                      <i className="bi bi-plus-circle me-2"></i>
+                      <span className="d-none d-sm-inline">Add Item</span>
+                      <span className="d-inline d-sm-none">Add</span>
                     </button>
                   </div>
 
@@ -412,6 +474,136 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
           </div>
         </div>
       </div>
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Add Item to Session
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => {
+                    setShowAddItemModal(false)
+                    setSearchTerm('')
+                    setGlobalSearchResults([])
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-4">
+                  <label htmlFor="globalSearchInput" className="form-label fw-medium">
+                    Search Items by SKU, Device Type, Color, or Case Type
+                  </label>
+                  <div className="input-group">
+                    <input
+                      type="text"
+                      id="globalSearchInput"
+                      className="form-control form-control-lg"
+                      placeholder="Enter SKU or search term..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value)
+                        handleGlobalSearch(e.target.value)
+                      }}
+                    />
+                    <button 
+                      className="btn btn-outline-secondary" 
+                      type="button"
+                      onClick={() => handleGlobalSearch(searchTerm)}
+                    >
+                      <i className="bi bi-search"></i>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search Results */}
+                {searchingGlobal && (
+                  <div className="text-center py-3">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Searching...</span>
+                    </div>
+                    <p className="mt-2 text-muted">Searching items...</p>
+                  </div>
+                )}
+
+                {globalSearchResults.length > 0 && (
+                  <div className="mb-3">
+                    <h6 className="fw-medium mb-3">Search Results ({globalSearchResults.length})</h6>
+                    <div className="row g-3">
+                      {globalSearchResults.map((item) => (
+                        <div key={item.id} className="col-md-6">
+                          <div className="card h-100">
+                            <div className="card-body">
+                              <div className="d-flex align-items-start">
+                                <div className="me-3">
+                                  {item.image ? (
+                                    <img 
+                                      src={item.image} 
+                                      alt={item.sku}
+                                      className="rounded"
+                                      style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                    />
+                                  ) : (
+                                    <div className="bg-light rounded d-flex align-items-center justify-content-center" 
+                                         style={{ width: '50px', height: '50px' }}>
+                                      <i className="bi bi-box text-muted"></i>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-grow-1">
+                                  <h6 className="fw-bold mb-1">{item.sku}</h6>
+                                  <p className="text-muted small mb-2">
+                                    {item.deviceType} - {item.colour} - {item.caseType}
+                                  </p>
+                                  {item.isRfidItem && (
+                                    <span className="badge bg-primary small">RFID</span>
+                                  )}
+                                </div>
+                                <button
+                                  className="btn btn-outline-primary btn-sm"
+                                  onClick={() => handleAddItemToSession(item.sku)}
+                                >
+                                  <i className="bi bi-plus"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {searchTerm && !searchingGlobal && globalSearchResults.length === 0 && (
+                  <div className="text-center py-4">
+                    <i className="bi bi-search text-muted" style={{ fontSize: '2rem' }}></i>
+                    <p className="text-muted mt-2">No items found matching "{searchTerm}"</p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowAddItemModal(false)
+                    setSearchTerm('')
+                    setGlobalSearchResults([])
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Barcode Scanner */}
       <BarcodeScanner
