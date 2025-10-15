@@ -122,18 +122,39 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     
     if (!session) return
     
-    // Find item by SKU
-    const foundItem = session.items.find(sessionItem => 
-      sessionItem.item.sku.toLowerCase().includes(barcode.toLowerCase()) ||
-      barcode.toLowerCase().includes(sessionItem.item.sku.toLowerCase())
-    )
+    // Clean and normalize the barcode
+    const cleanBarcode = barcode.trim().toUpperCase()
+    
+    // Find item by SKU with multiple matching strategies
+    const foundItem = session.items.find(sessionItem => {
+      const itemSku = sessionItem.item.sku.toUpperCase()
+      
+      // Direct match
+      if (itemSku === cleanBarcode) return true
+      
+      // Contains match
+      if (itemSku.includes(cleanBarcode) || cleanBarcode.includes(itemSku)) return true
+      
+      // Partial match for common barcode patterns
+      const skuParts = itemSku.split('-')
+      const barcodeParts = cleanBarcode.split('-')
+      
+      // Check if any part matches
+      return skuParts.some(part => 
+        barcodeParts.some(barcodePart => 
+          part.includes(barcodePart) || barcodePart.includes(part)
+        )
+      )
+    })
     
     if (foundItem) {
       setSelectedItem(foundItem.item)
       setSearchTerm(foundItem.item.sku)
       setQuantity('1') // Default quantity
     } else {
-      alert(`Barcode "${barcode}" not found in this session. Please select item manually.`)
+      // Show more helpful error message
+      const availableSkus = session.items.map(si => si.item.sku).join(', ')
+      alert(`Barcode "${barcode}" not found in this session.\n\nAvailable SKUs: ${availableSkus}\n\nPlease select item manually.`)
     }
   }
 

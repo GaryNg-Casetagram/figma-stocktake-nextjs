@@ -54,17 +54,37 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
   const handleScanResult = (barcode: string) => {
     setShowScanner(false)
     
-    // Find item by SKU (assuming barcode contains SKU)
-    const foundItem = items.find(item => 
-      item.sku.toLowerCase().includes(barcode.toLowerCase()) ||
-      barcode.toLowerCase().includes(item.sku.toLowerCase())
-    )
+    // Clean and normalize the barcode
+    const cleanBarcode = barcode.trim().toUpperCase()
+    
+    // Find item by SKU with multiple matching strategies
+    const foundItem = items.find(item => {
+      const itemSku = item.sku.toUpperCase()
+      
+      // Direct match
+      if (itemSku === cleanBarcode) return true
+      
+      // Contains match
+      if (itemSku.includes(cleanBarcode) || cleanBarcode.includes(itemSku)) return true
+      
+      // Partial match for common barcode patterns
+      const skuParts = itemSku.split('-')
+      const barcodeParts = cleanBarcode.split('-')
+      
+      // Check if any part matches
+      return skuParts.some(part => 
+        barcodeParts.some(barcodePart => 
+          part.includes(barcodePart) || barcodePart.includes(part)
+        )
+      )
+    })
     
     if (foundItem) {
       handleItemSelect(foundItem)
     } else {
-      // Show error or manual selection
-      alert(`Barcode "${barcode}" not found. Please select item manually.`)
+      // Show more helpful error message
+      const message = `Barcode "${barcode}" not found in the verification list.\n\nAvailable SKUs:\n${items.map(item => `• ${item.sku}`).join('\n')}\n\nPlease select the item manually.`
+      alert(message)
     }
   }
 

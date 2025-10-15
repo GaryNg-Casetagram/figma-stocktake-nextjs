@@ -15,7 +15,10 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string>('')
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
+  const [isInitializing, setIsInitializing] = useState(false)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -31,6 +34,7 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
 
   const initializeScanner = async () => {
     try {
+      setIsInitializing(true)
       setError('')
       setIsScanning(false)
       
@@ -39,67 +43,122 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
         throw new Error('Camera not supported on this device')
       }
 
-      // Request camera permission
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment', // Use back camera on mobile
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      })
+      // Request camera permission with fallback options
+      let stream: MediaStream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: 'environment', // Use back camera on mobile
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          } 
+        })
+      } catch (err) {
+        // Fallback to any available camera
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 1280, min: 640 },
+            height: { ideal: 720, min: 480 }
+          } 
+        })
+      }
       
+      streamRef.current = stream
       setHasPermission(true)
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play()
+        
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          if (videoRef.current) {
+            videoRef.current.onloadedmetadata = resolve
+          }
+        })
       }
 
       // Initialize ZXing reader
       readerRef.current = new BrowserMultiFormatReader()
       
-      // Start scanning
-      startScanning()
+      // Start scanning after a short delay
+      setTimeout(() => {
+        startScanning()
+      }, 1000)
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to access camera'
       setError(errorMessage)
       setHasPermission(false)
+      setIsInitializing(false)
       onError?.(errorMessage)
     }
   }
 
   const startScanning = async () => {
-    if (!readerRef.current || !videoRef.current) return
+    if (!readerRef.current || !videoRef.current || !isOpen) return
 
     try {
       setIsScanning(true)
+      setIsInitializing(false)
       
-      const result = await readerRef.current.decodeFromVideoElement(videoRef.current)
-      
-      if (result) {
-        onScan(result.getText())
-        stopScanning()
+      // Use a more reliable scanning approach
+      const scanFrame = async () => {
+        if (!readerRef.current || !videoRef.current || !isScanning) return
+        
+        try {
+          const result = await readerRef.current.decodeFromVideoElement(videoRef.current)
+          
+          if (result && result.getText()) {
+            const scannedText = result.getText().trim()
+            if (scannedText) {
+              onScan(scannedText)
+              stopScanning()
+              return
+            }
+          }
+        } catch (err) {
+          // Continue scanning - this is normal for ZXing
+        }
+        
+        // Continue scanning
+        if (isScanning && isOpen) {
+          scanningIntervalRef.current = setTimeout(scanFrame, 100)
+        }
       }
+      
+      scanFrame()
+      
     } catch (err) {
-      // Continue scanning - this is normal for ZXing
-      if (isScanning) {
-        setTimeout(() => startScanning(), 100)
-      }
+      console.error('Scanning error:', err)
+      setError('Failed to start scanning')
     }
   }
 
   const stopScanning = () => {
     setIsScanning(false)
+    setIsInitializing(false)
     
-    if (readerRef.current) {
-      readerRef.current.reset()
+    // Clear scanning interval
+    if (scanningIntervalRef.current) {
+      clearTimeout(scanningIntervalRef.current)
+      scanningIntervalRef.current = null
     }
     
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach(track => track.stop())
+    // Stop camera stream
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current = null
+    }
+    
+    // Reset video element
+    if (videoRef.current) {
       videoRef.current.srcObject = null
+    }
+    
+    // Reset reader
+    if (readerRef.current) {
+      readerRef.current.reset()
     }
   }
 
@@ -110,7 +169,10 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
 
   const handleRetry = () => {
     setError('')
-    initializeScanner()
+    stopScanning()
+    setTimeout(() => {
+      initializeScanner()
+    }, 500)
   }
 
   if (!isOpen) return null
@@ -167,42 +229,53 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
                 {/* Scanning overlay */}
                 <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center">
                   <div className="text-center text-white">
-                    <div className="mb-3">
-                      <div 
-                        className="border border-white border-3 rounded"
-                        style={{
-                          width: '250px',
-                          height: '150px',
-                          position: 'relative'
-                        }}
-                      >
-                        {/* Corner indicators */}
-                        <div className="position-absolute top-0 start-0" style={{ width: '20px', height: '20px' }}>
-                          <div className="border-top border-start border-white border-3" style={{ width: '100%', height: '100%' }}></div>
-                        </div>
-                        <div className="position-absolute top-0 end-0" style={{ width: '20px', height: '20px' }}>
-                          <div className="border-top border-end border-white border-3" style={{ width: '100%', height: '100%' }}></div>
-                        </div>
-                        <div className="position-absolute bottom-0 start-0" style={{ width: '20px', height: '20px' }}>
-                          <div className="border-bottom border-start border-white border-3" style={{ width: '100%', height: '100%' }}></div>
-                        </div>
-                        <div className="position-absolute bottom-0 end-0" style={{ width: '20px', height: '20px' }}>
-                          <div className="border-bottom border-end border-white border-3" style={{ width: '100%', height: '100%' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {isScanning && (
+                    {isInitializing ? (
                       <div className="mb-3">
                         <div className="spinner-border text-white" role="status">
-                          <span className="visually-hidden">Scanning...</span>
+                          <span className="visually-hidden">Initializing...</span>
                         </div>
+                        <p className="mt-3 mb-0">Initializing camera...</p>
                       </div>
+                    ) : (
+                      <>
+                        <div className="mb-3">
+                          <div 
+                            className="border border-white border-3 rounded"
+                            style={{
+                              width: '250px',
+                              height: '150px',
+                              position: 'relative'
+                            }}
+                          >
+                            {/* Corner indicators */}
+                            <div className="position-absolute top-0 start-0" style={{ width: '20px', height: '20px' }}>
+                              <div className="border-top border-start border-white border-3" style={{ width: '100%', height: '100%' }}></div>
+                            </div>
+                            <div className="position-absolute top-0 end-0" style={{ width: '20px', height: '20px' }}>
+                              <div className="border-top border-end border-white border-3" style={{ width: '100%', height: '100%' }}></div>
+                            </div>
+                            <div className="position-absolute bottom-0 start-0" style={{ width: '20px', height: '20px' }}>
+                              <div className="border-bottom border-start border-white border-3" style={{ width: '100%', height: '100%' }}></div>
+                            </div>
+                            <div className="position-absolute bottom-0 end-0" style={{ width: '20px', height: '20px' }}>
+                              <div className="border-bottom border-end border-white border-3" style={{ width: '100%', height: '100%' }}></div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {isScanning && (
+                          <div className="mb-3">
+                            <div className="spinner-border text-white" role="status">
+                              <span className="visually-hidden">Scanning...</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <p className="mb-0">
+                          {isScanning ? 'Point camera at barcode' : 'Preparing camera...'}
+                        </p>
+                      </>
                     )}
-                    
-                    <p className="mb-0">
-                      {isScanning ? 'Point camera at barcode' : 'Preparing camera...'}
-                    </p>
                   </div>
                 </div>
                 
