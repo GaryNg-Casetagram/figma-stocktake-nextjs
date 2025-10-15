@@ -32,8 +32,18 @@ export default async function SessionSummaryPage({
   if (!session) {
     return (
       <Layout>
-        <div className="p-8">
-          <h1 className="text-3xl font-bold text-red-600">Session not found</h1>
+        <div className="container-fluid py-5">
+          <div className="text-center">
+            <div className="mb-4">
+              <i className="bi bi-exclamation-triangle text-danger" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h1 className="display-6 fw-bold text-danger mb-3">Session Not Found</h1>
+            <p className="text-muted mb-4">The session you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+            <Link href="/sessions" className="btn btn-gradient-primary btn-lg">
+              <i className="bi bi-arrow-left me-2"></i>
+              Back to Sessions
+            </Link>
+          </div>
         </div>
       </Layout>
     )
@@ -50,122 +60,123 @@ export default async function SessionSummaryPage({
 
   return (
     <Layout>
-      <div className="p-8">
-        <div className="flex justify-between items-center mb-6">
+      <div className="animate-fade-in">
+        {/* Header */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold">{session.name}</h1>
-            <p className="text-gray-600">{session.description}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Location: {session.location.name} - {session.location.locale}
-            </p>
+            <h1 className="display-6 fw-bold gradient-text mb-2">
+              <i className="bi bi-clipboard-check me-3"></i>
+              {session.name}
+            </h1>
+            <p className="text-muted lead mb-2">{session.description}</p>
+            <div className="d-flex align-items-center text-muted">
+              <i className="bi bi-geo-alt me-2"></i>
+              <span>{session.location.name} - {session.location.locale}</span>
+              <span className="mx-3">•</span>
+              <i className="bi bi-box me-2"></i>
+              <span>{session.items.length} items</span>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="d-flex gap-2">
             <Link
               href={`/sessions/${session.id}/count`}
-              className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+              className="btn btn-gradient-success btn-lg"
             >
+              <i className="bi bi-play-circle me-2"></i>
               Start Counting
             </Link>
             <Link
               href="/sessions"
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              className="btn btn-outline-secondary btn-lg"
             >
+              <i className="bi bi-arrow-left me-2"></i>
               Back to Sessions
             </Link>
           </div>
         </div>
 
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <div className="bg-gray-50 px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold">Session Items Summary</h2>
+        {/* Session Summary Card */}
+        <div className="card card-enhanced">
+          <div className="card-header bg-transparent border-0 pb-0">
+            <h2 className="card-title h4 fw-bold mb-0">
+              <i className="bi bi-list-ul me-2"></i>
+              Session Items Summary
+            </h2>
           </div>
           
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    SKU
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Device Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Colour
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Case Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Count Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Counts
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {session.items.map((sessionItem) => {
-                  const counts = itemCounts[sessionItem.item.id] || []
-                  const quantities = counts.map(c => c.quantity)
-                  
-                  return (
-                    <tr key={sessionItem.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {sessionItem.item.sku}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sessionItem.item.deviceType}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sessionItem.item.colour}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sessionItem.item.caseType}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {counts.length === 0 ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Not Counted
-                          </span>
-                        ) : counts.length === 1 ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            Count 1 Complete
-                          </span>
-                        ) : counts.length === 2 ? (
-                          quantities[0] === quantities[1] ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Complete (2 counts match)
+          <div className="card-body p-0">
+            <div className="table-responsive">
+              <table className="table table-enhanced mb-0">
+                <thead>
+                  <tr>
+                    <th className="border-0">SKU</th>
+                    <th className="border-0">Device Type</th>
+                    <th className="border-0">Colour</th>
+                    <th className="border-0">Case Type</th>
+                    <th className="border-0">Count Status</th>
+                    <th className="border-0">Counts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {session.items.map((sessionItem) => {
+                    const counts = itemCounts[sessionItem.item.id] || []
+                    const quantities = counts.map(c => c.quantity)
+                    
+                    return (
+                      <tr key={sessionItem.id}>
+                        <td className="fw-medium">{sessionItem.item.sku}</td>
+                        <td>{sessionItem.item.deviceType}</td>
+                        <td>{sessionItem.item.colour}</td>
+                        <td>{sessionItem.item.caseType}</td>
+                        <td>
+                          {counts.length === 0 ? (
+                            <span className="status-badge status-not-counted">
+                              <i className="bi bi-x-circle me-1"></i>
+                              Not Counted
                             </span>
+                          ) : counts.length === 1 ? (
+                            <span className="status-badge status-counting">
+                              <i className="bi bi-1-circle me-1"></i>
+                              Count 1 Complete
+                            </span>
+                          ) : counts.length === 2 ? (
+                            quantities[0] === quantities[1] ? (
+                              <span className="status-badge status-complete">
+                                <i className="bi bi-check-circle me-1"></i>
+                                Complete (2 counts match)
+                              </span>
+                            ) : (
+                              <span className="status-badge status-counting">
+                                <i className="bi bi-2-circle me-1"></i>
+                                Count 2 Complete
+                              </span>
+                            )
                           ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              Count 2 Complete
+                            <span className="status-badge status-complete">
+                              <i className="bi bi-check-circle-fill me-1"></i>
+                              Complete (3 counts)
                             </span>
-                          )
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Complete (3 counts)
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {counts.length > 0 ? (
-                          <div className="space-y-1">
-                            {counts.map((count) => (
-                              <div key={count.id} className="text-xs">
-                                Count {count.countNumber}: {count.quantity}
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">No counts yet</span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                          )}
+                        </td>
+                        <td>
+                          {counts.length > 0 ? (
+                            <div className="d-flex flex-column gap-1">
+                              {counts.map((count) => (
+                                <div key={count.id} className="badge bg-light text-dark">
+                                  Count {count.countNumber}: {count.quantity}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-muted">No counts yet</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

@@ -114,8 +114,13 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   if (loading) {
     return (
       <Layout>
-        <div className="p-8">
-          <div className="text-center">Loading...</div>
+        <div className="container-fluid py-5">
+          <div className="text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-3 text-muted">Loading session...</p>
+          </div>
         </div>
       </Layout>
     )
@@ -124,8 +129,18 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   if (!session) {
     return (
       <Layout>
-        <div className="p-8">
-          <h1 className="text-3xl font-bold text-red-600">Session not found</h1>
+        <div className="container-fluid py-5">
+          <div className="text-center">
+            <div className="mb-4">
+              <i className="bi bi-exclamation-triangle text-danger" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h1 className="display-6 fw-bold text-danger mb-3">Session Not Found</h1>
+            <p className="text-muted mb-4">The session you&apos;re looking for doesn&apos;t exist or has been removed.</p>
+            <Link href="/sessions" className="btn btn-gradient-primary btn-lg">
+              <i className="bi bi-arrow-left me-2"></i>
+              Back to Sessions
+            </Link>
+          </div>
         </div>
       </Layout>
     )
@@ -139,147 +154,176 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
 
   return (
     <Layout>
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold">{session.name}</h1>
-              <p className="text-gray-600">{session.description}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Location: {session.location.name} - {session.location.locale}
-              </p>
+      <div className="animate-fade-in">
+        {/* Header */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h1 className="display-6 fw-bold gradient-text mb-2">
+              <i className="bi bi-calculator me-3"></i>
+              {session.name}
+            </h1>
+            <p className="text-muted lead mb-2">{session.description}</p>
+            <div className="d-flex align-items-center text-muted">
+              <i className="bi bi-geo-alt me-2"></i>
+              <span>{session.location.name} - {session.location.locale}</span>
             </div>
-            <Link
-              href={`/sessions/${session.id}`}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
-            >
-              Back to Summary
-            </Link>
           </div>
+          <Link
+            href={`/sessions/${session.id}`}
+            className="btn btn-outline-secondary btn-lg"
+          >
+            <i className="bi bi-arrow-left me-2"></i>
+            Back to Summary
+          </Link>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Search and Scan Section */}
-            <div className="bg-white border rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Scan or Search Item</h2>
+        <div className="row g-4">
+          {/* Search and Scan Section */}
+          <div className="col-lg-6">
+            <div className="card card-enhanced h-100">
+              <div className="card-header bg-transparent border-0 pb-0">
+                <h2 className="card-title h4 fw-bold mb-0">
+                  <i className="bi bi-search me-2"></i>
+                  Scan or Search Item
+                </h2>
+              </div>
               
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setScanMode(!scanMode)}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
-                      scanMode 
-                        ? 'bg-green-600 text-white' 
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {scanMode ? 'Stop Scanning' : 'Start Barcode Scan'}
-                  </button>
-                </div>
-
-                {scanMode && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800">
-                      Scanner mode active. Use your barcode scanner or enter barcode manually below.
-                    </p>
-                  </div>
-                )}
-
-                <div>
-                  <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">
-                    Search by SKU, Device Type, or Colour
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      id="search"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter SKU, device type, or colour..."
-                    />
+              <div className="card-body">
+                <div className="d-grid gap-3">
+                  <div className="d-flex gap-2">
                     <button
-                      onClick={handleManualSearch}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                      onClick={() => setScanMode(!scanMode)}
+                      className={`btn ${scanMode ? 'btn-gradient-success' : 'btn-outline-secondary'}`}
                     >
-                      Search
+                      <i className={`bi ${scanMode ? 'bi-stop-circle' : 'bi-upc-scan'} me-2`}></i>
+                      {scanMode ? 'Stop Scanning' : 'Start Barcode Scan'}
                     </button>
                   </div>
-                </div>
 
-                {searchTerm && (
-                  <div className="max-h-60 overflow-y-auto border rounded-lg">
-                    {filteredItems.map((sessionItem) => (
-                      <div
-                        key={sessionItem.id}
-                        onClick={() => setSelectedItem(sessionItem.item)}
-                        className={`p-3 border-b cursor-pointer hover:bg-gray-50 ${
-                          selectedItem?.id === sessionItem.item.id ? 'bg-blue-50' : ''
-                        }`}
-                      >
-                        <div className="font-medium">{sessionItem.item.sku}</div>
-                        <div className="text-sm text-gray-600">
-                          {sessionItem.item.deviceType} - {sessionItem.item.colour} - {sessionItem.item.caseType}
-                        </div>
+                  {scanMode && (
+                    <div className="alert alert-warning d-flex align-items-center" role="alert">
+                      <i className="bi bi-info-circle me-2"></i>
+                      <div>
+                        Scanner mode active. Use your barcode scanner or enter barcode manually below.
                       </div>
-                    ))}
+                    </div>
+                  )}
+
+                  <div>
+                    <label htmlFor="search" className="form-label fw-medium">
+                      Search by SKU, Device Type, or Colour
+                    </label>
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        id="search"
+                        className="form-control search-enhanced"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleManualSearch()}
+                        placeholder="Enter SKU, device type, or colour..."
+                      />
+                      <button
+                        onClick={handleManualSearch}
+                        className="btn btn-gradient-primary"
+                      >
+                        <i className="bi bi-search me-1"></i>
+                        Search
+                      </button>
+                    </div>
+                  </div>
+
+                  {searchTerm && (
+                    <div className="border rounded-3 overflow-hidden" style={{ maxHeight: '300px' }}>
+                      <div className="overflow-y-auto">
+                        {filteredItems.map((sessionItem) => (
+                          <div
+                            key={sessionItem.id}
+                            onClick={() => setSelectedItem(sessionItem.item)}
+                            className={`p-3 border-bottom cursor-pointer transition-all ${
+                              selectedItem?.id === sessionItem.item.id ? 'bg-primary bg-opacity-10' : 'hover-bg-light'
+                            }`}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <div className="fw-medium">{sessionItem.item.sku}</div>
+                            <div className="text-muted small">
+                              {sessionItem.item.deviceType} - {sessionItem.item.colour} - {sessionItem.item.caseType}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Count Input Section */}
+          <div className="col-lg-6">
+            <div className="card card-enhanced h-100">
+              <div className="card-header bg-transparent border-0 pb-0">
+                <h2 className="card-title h4 fw-bold mb-0">
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Count Item
+                </h2>
+              </div>
+              
+              <div className="card-body">
+                {selectedItem ? (
+                  <div className="d-grid gap-3">
+                    <div className="bg-light p-3 rounded-3">
+                      <h5 className="fw-medium mb-1">{selectedItem.sku}</h5>
+                      <p className="text-muted small mb-0">
+                        {selectedItem.deviceType} - {selectedItem.colour} - {selectedItem.caseType}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="quantity" className="form-label fw-medium">
+                        Quantity Counted
+                      </label>
+                      <input
+                        type="number"
+                        id="quantity"
+                        className="form-control form-control-lg"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        placeholder="Enter quantity"
+                        min="0"
+                      />
+                    </div>
+
+                    {session.counts.filter(c => c.itemId === selectedItem.id).length > 0 && (
+                      <div className="bg-light p-3 rounded-3">
+                        <h6 className="fw-medium mb-2">Previous counts:</h6>
+                        {session.counts
+                          .filter(c => c.itemId === selectedItem.id)
+                          .map((count) => (
+                            <div key={count.id} className="d-flex justify-content-between">
+                              <span>Count {count.countNumber}:</span>
+                              <span className="fw-medium">{count.quantity}</span>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleSubmitCount}
+                      disabled={!quantity}
+                      className="btn btn-gradient-success btn-lg"
+                    >
+                      <i className="bi bi-check-circle me-2"></i>
+                      Submit Count
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center text-muted py-5">
+                    <i className="bi bi-cursor" style={{ fontSize: '3rem' }}></i>
+                    <p className="mt-3 mb-0">Select an item to start counting</p>
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Count Input Section */}
-            <div className="bg-white border rounded-lg p-6">
-              <h2 className="text-xl font-semibold mb-4">Count Item</h2>
-              
-              {selectedItem ? (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h3 className="font-medium">{selectedItem.sku}</h3>
-                    <p className="text-sm text-gray-600">
-                      {selectedItem.deviceType} - {selectedItem.colour} - {selectedItem.caseType}
-                    </p>
-                  </div>
-
-                  <div>
-                    <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-2">
-                      Quantity Counted
-                    </label>
-                    <input
-                      type="number"
-                      id="quantity"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter quantity"
-                      min="0"
-                    />
-                  </div>
-
-                  <div className="text-sm text-gray-600">
-                    <p>Previous counts:</p>
-                    {session.counts
-                      .filter(c => c.itemId === selectedItem.id)
-                      .map((count) => (
-                        <div key={count.id}>
-                          Count {count.countNumber}: {count.quantity}
-                        </div>
-                      ))}
-                  </div>
-
-                  <button
-                    onClick={handleSubmitCount}
-                    disabled={!quantity}
-                    className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300"
-                  >
-                    Submit Count
-                  </button>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500 py-8">
-                  Select an item to start counting
-                </div>
-              )}
             </div>
           </div>
         </div>
