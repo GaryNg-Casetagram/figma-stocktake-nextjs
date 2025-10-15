@@ -1,35 +1,126 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Layout from '@/components/layout'
-import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import ReceivingVerification from '@/components/ReceivingVerification'
 import SessionItemsSummary from '@/components/SessionItemsSummary'
 
-async function getSession(id: string) {
-  return await prisma.session.findUnique({
-    where: { id },
-    include: {
-      location: true,
-      items: {
-        include: {
-          item: true
-        }
-      },
-      counts: {
-        include: {
-          session: true
-        }
-      }
+interface Session {
+  id: string
+  name: string
+  description: string
+  location: {
+    id: string
+    name: string
+    locale: string
+  }
+  items: Array<{
+    id: string
+    item: {
+      id: string
+      sku: string
+      deviceType: string
+      colour: string
+      caseType: string
     }
-  })
+  }>
+  counts: Array<{
+    id: string
+    itemId: string
+    quantity: number
+    countNumber: number
+    createdAt: string
+  }>
 }
 
-export default async function SessionSummaryPage({
+export default function SessionSummaryPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = await params
-  const session = await getSession(id)
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [id, setId] = useState<string>('')
+  const [error, setError] = useState<string>('')
+
+  useEffect(() => {
+    const getSessionId = async () => {
+      try {
+        const resolvedParams = await params
+        console.log('Resolved params:', resolvedParams)
+        setId(resolvedParams.id)
+      } catch (error) {
+        console.error('Error resolving params:', error)
+        setError('Failed to load session ID')
+        setLoading(false)
+      }
+    }
+    getSessionId()
+  }, [params])
+
+  useEffect(() => {
+    if (!id) return
+
+    const fetchSession = async () => {
+      try {
+        console.log('Fetching session for ID:', id)
+        const response = await fetch(`/api/sessions/${id}`)
+        console.log('Response status:', response.status)
+        
+        if (response.ok) {
+          const data = await response.json()
+          console.log('Session data:', data)
+          setSession(data)
+        } else {
+          setError('Session not found')
+        }
+      } catch (error) {
+        console.error('Error fetching session:', error)
+        setError('Failed to load session')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSession()
+  }, [id])
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container-fluid py-5">
+          <div className="text-center">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-3 text-muted">Loading session...</p>
+            {id && <p className="text-muted small">Session ID: {id}</p>}
+          </div>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (error) {
+    return (
+      <Layout>
+        <div className="container-fluid py-5">
+          <div className="text-center">
+            <div className="mb-4">
+              <i className="bi bi-exclamation-triangle text-danger" style={{ fontSize: '4rem' }}></i>
+            </div>
+            <h1 className="display-6 fw-bold text-danger mb-3">Error</h1>
+            <p className="text-muted mb-4">{error}</p>
+            <Link href="/sessions" className="btn btn-gradient-primary btn-lg">
+              <i className="bi bi-arrow-left me-2"></i>
+              Back to Sessions
+            </Link>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
 
   if (!session) {
     return (
@@ -71,12 +162,22 @@ export default async function SessionSummaryPage({
       id: count.id,
       quantity: count.quantity,
       countNumber: count.countNumber,
-      createdAt: count.createdAt?.toISOString() || new Date().toISOString()
+      createdAt: count.createdAt
     }))
   }))
 
   // Check if this is a Receiving Verification session
   const isReceivingVerification = session.name.toLowerCase().includes('receiving')
+
+  const handleItemVerified = (itemId: string, quantity: number, notes?: string) => {
+    console.log('Item verified:', { itemId, quantity, notes })
+    // TODO: Implement API call to update item verification
+  }
+
+  const handleItemClick = (item: { id: string; sku: string; deviceType: string; colour: string; caseType: string; counts: Array<{ id: string; quantity: number; countNumber: number; createdAt: string }> }) => {
+    console.log('Item clicked:', item)
+    // TODO: Implement item click functionality
+  }
 
   return (
     <Layout>
@@ -131,10 +232,7 @@ export default async function SessionSummaryPage({
                        item.counts.length === 1 ? 'verified' : 'discrepancy',
                 notes: ''
               }))}
-              onItemVerified={(itemId, quantity, notes) => {
-                // This would make an API call to update the item verification
-                console.log('Item verified:', { itemId, quantity, notes })
-              }}
+              onItemVerified={handleItemVerified}
             />
           </div>
         )}
@@ -142,10 +240,7 @@ export default async function SessionSummaryPage({
         {/* Session Items Summary */}
         <SessionItemsSummary
           items={sessionItems}
-          onItemClick={(item) => {
-            // This could open a detailed view or start counting for that specific item
-            console.log('Item clicked:', item)
-          }}
+          onItemClick={handleItemClick}
         />
       </div>
     </Layout>
