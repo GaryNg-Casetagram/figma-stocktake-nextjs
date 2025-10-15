@@ -1,6 +1,8 @@
 import Layout from '@/components/layout'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import ReceivingVerification from '@/components/ReceivingVerification'
+import SessionItemsSummary from '@/components/SessionItemsSummary'
 
 async function getSession(id: string) {
   return await prisma.session.findUnique({
@@ -58,6 +60,24 @@ export default async function SessionSummaryPage({
     return acc
   }, {} as Record<string, typeof session.counts>)
 
+  // Transform items for the new components
+  const sessionItems = session.items.map(sessionItem => ({
+    id: sessionItem.item.id,
+    sku: sessionItem.item.sku,
+    deviceType: sessionItem.item.deviceType,
+    colour: sessionItem.item.colour,
+    caseType: sessionItem.item.caseType,
+    counts: (itemCounts[sessionItem.item.id] || []).map(count => ({
+      id: count.id,
+      quantity: count.quantity,
+      countNumber: count.countNumber,
+      createdAt: count.createdAt?.toISOString() || new Date().toISOString()
+    }))
+  }))
+
+  // Check if this is a Receiving Verification session
+  const isReceivingVerification = session.name.toLowerCase().includes('receiving')
+
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -65,7 +85,7 @@ export default async function SessionSummaryPage({
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div>
             <h1 className="display-6 fw-bold gradient-text mb-2">
-              <i className="bi bi-clipboard-check me-3"></i>
+              <i className={`bi ${isReceivingVerification ? 'bi-truck' : 'bi-clipboard-check'} me-3`}></i>
               {session.name}
             </h1>
             <p className="text-muted lead mb-2">{session.description}</p>
@@ -83,7 +103,7 @@ export default async function SessionSummaryPage({
               className="btn btn-gradient-success btn-lg"
             >
               <i className="bi bi-play-circle me-2"></i>
-              Start Counting
+              {isReceivingVerification ? 'Start Verification' : 'Start Counting'}
             </Link>
             <Link
               href="/sessions"
@@ -95,90 +115,38 @@ export default async function SessionSummaryPage({
           </div>
         </div>
 
-        {/* Session Summary Card */}
-        <div className="card card-enhanced">
-          <div className="card-header bg-transparent border-0 pb-0">
-            <h2 className="card-title h4 fw-bold mb-0">
-              <i className="bi bi-list-ul me-2"></i>
-              Session Items Summary
-            </h2>
+        {/* Receiving Verification Section */}
+        {isReceivingVerification && (
+          <div className="mb-5">
+            <ReceivingVerification
+              items={sessionItems.map(item => ({
+                id: item.id,
+                sku: item.sku,
+                deviceType: item.deviceType,
+                colour: item.colour,
+                caseType: item.caseType,
+                expectedQuantity: 1, // This would come from purchase orders in a real system
+                receivedQuantity: item.counts.length > 0 ? item.counts[0].quantity : 0,
+                status: item.counts.length === 0 ? 'pending' : 
+                       item.counts.length === 1 ? 'verified' : 'discrepancy',
+                notes: ''
+              }))}
+              onItemVerified={(itemId, quantity, notes) => {
+                // This would make an API call to update the item verification
+                console.log('Item verified:', { itemId, quantity, notes })
+              }}
+            />
           </div>
-          
-          <div className="card-body p-0">
-            <div className="table-responsive">
-              <table className="table table-enhanced mb-0">
-                <thead>
-                  <tr>
-                    <th className="border-0">SKU</th>
-                    <th className="border-0">Device Type</th>
-                    <th className="border-0">Colour</th>
-                    <th className="border-0">Case Type</th>
-                    <th className="border-0">Count Status</th>
-                    <th className="border-0">Counts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {session.items.map((sessionItem) => {
-                    const counts = itemCounts[sessionItem.item.id] || []
-                    const quantities = counts.map(c => c.quantity)
-                    
-                    return (
-                      <tr key={sessionItem.id}>
-                        <td className="fw-medium">{sessionItem.item.sku}</td>
-                        <td>{sessionItem.item.deviceType}</td>
-                        <td>{sessionItem.item.colour}</td>
-                        <td>{sessionItem.item.caseType}</td>
-                        <td>
-                          {counts.length === 0 ? (
-                            <span className="status-badge status-not-counted">
-                              <i className="bi bi-x-circle me-1"></i>
-                              Not Counted
-                            </span>
-                          ) : counts.length === 1 ? (
-                            <span className="status-badge status-counting">
-                              <i className="bi bi-1-circle me-1"></i>
-                              Count 1 Complete
-                            </span>
-                          ) : counts.length === 2 ? (
-                            quantities[0] === quantities[1] ? (
-                              <span className="status-badge status-complete">
-                                <i className="bi bi-check-circle me-1"></i>
-                                Complete (2 counts match)
-                              </span>
-                            ) : (
-                              <span className="status-badge status-counting">
-                                <i className="bi bi-2-circle me-1"></i>
-                                Count 2 Complete
-                              </span>
-                            )
-                          ) : (
-                            <span className="status-badge status-complete">
-                              <i className="bi bi-check-circle-fill me-1"></i>
-                              Complete (3 counts)
-                            </span>
-                          )}
-                        </td>
-                        <td>
-                          {counts.length > 0 ? (
-                            <div className="d-flex flex-column gap-1">
-                              {counts.map((count) => (
-                                <div key={count.id} className="badge bg-light text-dark">
-                                  Count {count.countNumber}: {count.quantity}
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-muted">No counts yet</span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        )}
+
+        {/* Session Items Summary */}
+        <SessionItemsSummary
+          items={sessionItems}
+          onItemClick={(item) => {
+            // This could open a detailed view or start counting for that specific item
+            console.log('Item clicked:', item)
+          }}
+        />
       </div>
     </Layout>
   )
