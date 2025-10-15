@@ -46,6 +46,9 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   const [showAddItemModal, setShowAddItemModal] = useState(false)
   const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([])
   const [searchingGlobal, setSearchingGlobal] = useState(false)
+  const [showItemPreview, setShowItemPreview] = useState(false)
+  const [previewItem, setPreviewItem] = useState<any>(null)
+  const [previewQuantity, setPreviewQuantity] = useState('1')
 
   const fetchSession = useCallback(async () => {
     try {
@@ -177,7 +180,16 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       // Item not found in session, search globally
       showNotification('error', `Barcode "${barcode}" not found in session. Searching global database...`)
       await handleGlobalSearch(barcode)
-      setShowAddItemModal(true)
+      
+      // If we found items in global search, show the first one for preview
+      if (globalSearchResults.length > 0) {
+        setPreviewItem(globalSearchResults[0])
+        setPreviewQuantity('1')
+        setShowItemPreview(true)
+      } else {
+        // No items found, show add modal for manual search
+        setShowAddItemModal(true)
+      }
     }
   }
 
@@ -233,6 +245,50 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       console.error('Add item error:', error)
       showNotification('error', 'Failed to add item to session')
     }
+  }
+
+  const handleConfirmAddItem = async () => {
+    if (!session || !previewItem) return
+
+    try {
+      const response = await fetch(`/api/sessions/${session.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, itemSku: previewItem.sku })
+      })
+
+      if (response.ok) {
+        showNotification('success', `Item "${previewItem.sku}" added to session successfully`)
+        // Refresh session data
+        await fetchSession()
+        setShowItemPreview(false)
+        setPreviewItem(null)
+        setPreviewQuantity('1')
+        
+        // Auto-select the item for counting
+        setSelectedItem({
+          id: previewItem.id,
+          sku: previewItem.sku,
+          deviceType: previewItem.deviceType,
+          colour: previewItem.colour,
+          caseType: previewItem.caseType
+        })
+        setQuantity(previewQuantity)
+        setSearchTerm(previewItem.sku)
+      } else {
+        const errorData = await response.json()
+        showNotification('error', errorData.error || 'Failed to add item to session')
+      }
+    } catch (error) {
+      console.error('Add item error:', error)
+      showNotification('error', 'Failed to add item to session')
+    }
+  }
+
+  const handleCancelAddItem = () => {
+    setShowItemPreview(false)
+    setPreviewItem(null)
+    setPreviewQuantity('1')
   }
 
   if (loading) {
@@ -332,7 +388,7 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
                       className="btn btn-gradient-success"
                     >
                       <i className="bi bi-upc-scan me-2"></i>
-                      <span className="d-none d-sm-inline">Start Barcode Scan</span>
+                      <span className="d-none d-sm-inline">Start Scan</span>
                       <span className="d-inline d-sm-none">Scan</span>
                     </button>
                     <button
@@ -474,6 +530,119 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
           </div>
         </div>
       </div>
+
+      {/* Item Preview Modal */}
+      {showItemPreview && previewItem && (
+        <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="bi bi-eye me-2"></i>
+                  Item Found - Confirm Addition
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={handleCancelAddItem}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="row g-4">
+                  {/* Item Image */}
+                  <div className="col-md-4 text-center">
+                    {previewItem.image ? (
+                      <img 
+                        src={previewItem.image} 
+                        alt={previewItem.sku}
+                        className="img-fluid rounded shadow"
+                        style={{ maxHeight: '200px' }}
+                      />
+                    ) : (
+                      <div className="bg-light rounded d-flex align-items-center justify-content-center mx-auto" 
+                           style={{ width: '200px', height: '200px' }}>
+                        <i className="bi bi-box text-muted" style={{ fontSize: '4rem' }}></i>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Item Details */}
+                  <div className="col-md-8">
+                    <h4 className="fw-bold mb-3">{previewItem.sku}</h4>
+                    
+                    <div className="row g-3 mb-4">
+                      <div className="col-sm-6">
+                        <label className="form-label fw-medium text-muted">Device Type</label>
+                        <p className="mb-0">{previewItem.deviceType}</p>
+                      </div>
+                      <div className="col-sm-6">
+                        <label className="form-label fw-medium text-muted">Color</label>
+                        <p className="mb-0">{previewItem.colour}</p>
+                      </div>
+                      <div className="col-sm-6">
+                        <label className="form-label fw-medium text-muted">Case Type</label>
+                        <p className="mb-0">{previewItem.caseType}</p>
+                      </div>
+                      <div className="col-sm-6">
+                        <label className="form-label fw-medium text-muted">Type</label>
+                        <p className="mb-0">
+                          {previewItem.isRfidItem ? (
+                            <span className="badge bg-primary">RFID Item</span>
+                          ) : (
+                            <span className="badge bg-secondary">Non-RFID</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    {previewItem.description && (
+                      <div className="mb-4">
+                        <label className="form-label fw-medium text-muted">Description</label>
+                        <p className="mb-0">{previewItem.description}</p>
+                      </div>
+                    )}
+
+                    {/* Quantity Input */}
+                    <div className="mb-4">
+                      <label htmlFor="previewQuantity" className="form-label fw-medium">
+                        Quantity to Count
+                      </label>
+                      <input
+                        type="number"
+                        id="previewQuantity"
+                        className="form-control form-control-lg"
+                        value={previewQuantity}
+                        onChange={(e) => setPreviewQuantity(e.target.value)}
+                        placeholder="Enter quantity"
+                        min="1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-outline-secondary"
+                  onClick={handleCancelAddItem}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="btn btn-gradient-success"
+                  onClick={handleConfirmAddItem}
+                  disabled={!previewQuantity || parseInt(previewQuantity) < 1}
+                >
+                  <i className="bi bi-check-circle me-2"></i>
+                  Add to Session & Count
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Item Modal */}
       {showAddItemModal && (
