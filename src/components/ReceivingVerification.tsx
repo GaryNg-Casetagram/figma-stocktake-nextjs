@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import BarcodeScanner from './BarcodeScanner'
 
 interface ReceivingItem {
   id: string
@@ -24,6 +25,7 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
   const [receivedQuantity, setReceivedQuantity] = useState<number>(0)
   const [notes, setNotes] = useState<string>('')
   const [showModal, setShowModal] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
 
   const pendingItems = items.filter(item => item.status === 'pending')
   const verifiedItems = items.filter(item => item.status === 'verified')
@@ -46,13 +48,29 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
   }
 
   const handleBarcodeScan = () => {
-    // In a real implementation, this would integrate with a barcode scanner
-    setTimeout(() => {
-      const randomItem = pendingItems[Math.floor(Math.random() * pendingItems.length)]
-      if (randomItem) {
-        handleItemSelect(randomItem)
-      }
-    }, 1000)
+    setShowScanner(true)
+  }
+
+  const handleScanResult = (barcode: string) => {
+    setShowScanner(false)
+    
+    // Find item by SKU (assuming barcode contains SKU)
+    const foundItem = items.find(item => 
+      item.sku.toLowerCase().includes(barcode.toLowerCase()) ||
+      barcode.toLowerCase().includes(item.sku.toLowerCase())
+    )
+    
+    if (foundItem) {
+      handleItemSelect(foundItem)
+    } else {
+      // Show error or manual selection
+      alert(`Barcode "${barcode}" not found. Please select item manually.`)
+    }
+  }
+
+  const handleScanError = (error: string) => {
+    console.error('Barcode scan error:', error)
+    // Optionally show error to user
   }
 
   return (
@@ -277,6 +295,14 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
           </div>
         </div>
       )}
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={handleScanResult}
+        onError={handleScanError}
+      />
     </div>
   )
 }

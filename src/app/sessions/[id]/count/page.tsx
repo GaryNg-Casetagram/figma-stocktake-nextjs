@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Layout from '@/components/layout'
 import Link from 'next/link'
+import BarcodeScanner from '@/components/BarcodeScanner'
 
 interface Item {
   id: string
@@ -39,6 +40,7 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
   const [quantity, setQuantity] = useState('')
   const [scanMode, setScanMode] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
 
   const fetchSession = useCallback(async () => {
     try {
@@ -109,6 +111,34 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     } catch (error) {
       console.error('Error submitting count:', error)
     }
+  }
+
+  const handleBarcodeScan = () => {
+    setShowScanner(true)
+  }
+
+  const handleScanResult = (barcode: string) => {
+    setShowScanner(false)
+    
+    if (!session) return
+    
+    // Find item by SKU
+    const foundItem = session.items.find(sessionItem => 
+      sessionItem.item.sku.toLowerCase().includes(barcode.toLowerCase()) ||
+      barcode.toLowerCase().includes(sessionItem.item.sku.toLowerCase())
+    )
+    
+    if (foundItem) {
+      setSelectedItem(foundItem.item)
+      setSearchTerm(foundItem.item.sku)
+      setQuantity('1') // Default quantity
+    } else {
+      alert(`Barcode "${barcode}" not found in this session. Please select item manually.`)
+    }
+  }
+
+  const handleScanError = (error: string) => {
+    console.error('Barcode scan error:', error)
   }
 
   if (loading) {
@@ -192,22 +222,15 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
                 <div className="d-grid gap-3">
                   <div className="d-flex gap-2">
                     <button
-                      onClick={() => setScanMode(!scanMode)}
-                      className={`btn ${scanMode ? 'btn-gradient-success' : 'btn-outline-secondary'}`}
+                      onClick={() => setShowScanner(true)}
+                      className="btn btn-gradient-success"
                     >
-                      <i className={`bi ${scanMode ? 'bi-stop-circle' : 'bi-upc-scan'} me-2`}></i>
-                      {scanMode ? 'Stop Scanning' : 'Start Barcode Scan'}
+                      <i className="bi bi-upc-scan me-2"></i>
+                      <span className="d-none d-sm-inline">Start Barcode Scan</span>
+                      <span className="d-inline d-sm-none">Scan</span>
                     </button>
                   </div>
 
-                  {scanMode && (
-                    <div className="alert alert-warning d-flex align-items-center" role="alert">
-                      <i className="bi bi-info-circle me-2"></i>
-                      <div>
-                        Scanner mode active. Use your barcode scanner or enter barcode manually below.
-                      </div>
-                    </div>
-                  )}
 
                   <div>
                     <label htmlFor="search" className="form-label fw-medium">
@@ -328,6 +351,14 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
           </div>
         </div>
       </div>
+
+      {/* Barcode Scanner */}
+      <BarcodeScanner
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onScan={handleScanResult}
+        onError={handleScanError}
+      />
     </Layout>
   )
 }
