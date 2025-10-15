@@ -137,30 +137,104 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     
     if (!session) return
     
-    // Clean and normalize the barcode
-    const cleanBarcode = barcode.trim().toUpperCase()
+    console.log('Scanned barcode:', barcode)
     
-    // Find item by SKU with multiple matching strategies
-    const foundItem = session.items.find(sessionItem => {
-      const itemSku = sessionItem.item.sku.toUpperCase()
-      
-      // Direct match
-      if (itemSku === cleanBarcode) return true
-      
-      // Contains match
-      if (itemSku.includes(cleanBarcode) || cleanBarcode.includes(itemSku)) return true
-      
-      // Partial match for common barcode patterns
-      const skuParts = itemSku.split('-')
-      const barcodeParts = cleanBarcode.split('-')
-      
-      // Check if any part matches
-      return skuParts.some(part => 
-        barcodeParts.some(barcodePart => 
-          part.includes(barcodePart) || barcodePart.includes(part)
+    // Clean and normalize the barcode - more aggressive cleaning
+    const cleanBarcode = barcode.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '')
+    console.log('Cleaned barcode:', cleanBarcode)
+    
+    // Enhanced search function for better matching
+    const findItemInSession = (sessionItems: any[], searchTerm: string) => {
+      return sessionItems.find(sessionItem => {
+        const itemSku = sessionItem.item.sku.toUpperCase()
+        console.log('Checking item SKU:', itemSku, 'against:', searchTerm)
+        
+        // 1. Direct exact match
+        if (itemSku === searchTerm) {
+          console.log('Direct match found:', itemSku)
+          return true
+        }
+        
+        // 2. Case-insensitive exact match
+        if (itemSku.toLowerCase() === searchTerm.toLowerCase()) {
+          console.log('Case-insensitive match found:', itemSku)
+          return true
+        }
+        
+        // 3. Contains match (both directions)
+        if (itemSku.includes(searchTerm) || searchTerm.includes(itemSku)) {
+          console.log('Contains match found:', itemSku)
+          return true
+        }
+        
+        // 4. Remove all non-alphanumeric characters and compare
+        const cleanSku = itemSku.replace(/[^A-Z0-9]/g, '')
+        const cleanSearch = searchTerm.replace(/[^A-Z0-9]/g, '')
+        if (cleanSku === cleanSearch) {
+          console.log('Clean match found:', itemSku)
+          return true
+        }
+        
+        // 5. Partial match for hyphenated patterns
+        const skuParts = itemSku.split('-')
+        const searchParts = searchTerm.split('-')
+        
+        // Check if all search parts are found in SKU parts
+        const allPartsMatch = searchParts.every((searchPart: string) => 
+          skuParts.some((skuPart: string) => 
+            skuPart.includes(searchPart) || searchPart.includes(skuPart)
+          )
         )
-      )
-    })
+        
+        if (allPartsMatch && searchParts.length > 1) {
+          console.log('Partial hyphenated match found:', itemSku)
+          return true
+        }
+        
+        // 6. Fuzzy matching for common OCR errors
+        const fuzzyMatch = (str1: string, str2: string) => {
+          const longer = str1.length > str2.length ? str1 : str2
+          const shorter = str1.length > str2.length ? str2 : str1
+          const editDistance = levenshteinDistance(longer, shorter)
+          return editDistance <= 2 && longer.length > 5 // Allow 2 character differences for longer strings
+        }
+        
+        if (fuzzyMatch(itemSku, searchTerm)) {
+          console.log('Fuzzy match found:', itemSku)
+          return true
+        }
+        
+        return false
+      })
+    }
+    
+    // Simple Levenshtein distance function for fuzzy matching
+    const levenshteinDistance = (str1: string, str2: string) => {
+      const matrix = []
+      for (let i = 0; i <= str2.length; i++) {
+        matrix[i] = [i]
+      }
+      for (let j = 0; j <= str1.length; j++) {
+        matrix[0][j] = j
+      }
+      for (let i = 1; i <= str2.length; i++) {
+        for (let j = 1; j <= str1.length; j++) {
+          if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+            matrix[i][j] = matrix[i - 1][j - 1]
+          } else {
+            matrix[i][j] = Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            )
+          }
+        }
+      }
+      return matrix[str2.length][str1.length]
+    }
+    
+    // First, try to find in session items
+    const foundItem = findItemInSession(session.items, cleanBarcode)
     
     if (foundItem) {
       // Auto-select the item and show success feedback
@@ -175,19 +249,26 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       }, 3000)
       
       // Show success notification
-      showNotification('success', `Item auto-selected: ${foundItem.item.sku}. Ready to count! Quantity set to 1.`)
+      showNotification('success', `✅ Item found and auto-selected: ${foundItem.item.sku}. Ready to count!`)
     } else {
-      // Item not found in session, search globally
-      showNotification('error', `Barcode "${barcode}" not found in session. Searching global database...`)
-      await handleGlobalSearch(barcode)
+      // Item not found in session, search globally with enhanced search
+      console.log('Item not found in session, searching globally...')
+      showNotification('error', `❌ Item "${cleanBarcode}" not found in session. Searching global database...`)
+      
+      // Enhanced global search with the same matching logic
+      await handleGlobalSearch(cleanBarcode)
       
       // If we found items in global search, show the first one for preview
       if (globalSearchResults.length > 0) {
+        console.log('Found items in global search:', globalSearchResults.length)
         setPreviewItem(globalSearchResults[0])
         setPreviewQuantity('1')
         setShowItemPreview(true)
+        showNotification('success', `✅ Found item in global database: ${globalSearchResults[0].sku}`)
       } else {
         // No items found, show add modal for manual search
+        console.log('No items found in global search')
+        showNotification('error', `❌ No items found matching "${cleanBarcode}". Please try manual search.`)
         setShowAddItemModal(true)
       }
     }
@@ -203,15 +284,61 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       return
     }
 
+    console.log('Global search for:', query)
     setSearchingGlobal(true)
     try {
-      const response = await fetch(`/api/items/search?q=${encodeURIComponent(query)}`)
-      if (response.ok) {
-        const data = await response.json()
-        setGlobalSearchResults(data.items)
-      } else {
-        showNotification('error', 'Failed to search items')
+      // Try multiple search strategies
+      const searchQueries = [
+        query, // Original query
+        query.replace(/[^A-Z0-9-]/g, ''), // Clean query
+        query.split('-').join(''), // Remove hyphens
+        query.split('-')[0], // First part only
+        query.split('-').slice(0, 2).join('-'), // First two parts
+      ]
+      
+      let allResults: any[] = []
+      
+      // Search with each query strategy
+      for (const searchQuery of searchQueries) {
+        if (searchQuery.trim()) {
+          try {
+            const response = await fetch(`/api/items/search?q=${encodeURIComponent(searchQuery)}`)
+            if (response.ok) {
+              const data = await response.json()
+              allResults = [...allResults, ...data.items]
+            }
+          } catch (err) {
+            console.log('Search error for query:', searchQuery, err)
+          }
+        }
       }
+      
+      // Remove duplicates and sort by relevance
+      const uniqueResults = allResults.filter((item, index, self) => 
+        index === self.findIndex(t => t.id === item.id)
+      )
+      
+      // Sort by relevance (exact matches first)
+      const sortedResults = uniqueResults.sort((a, b) => {
+        const aSku = a.sku.toUpperCase()
+        const bSku = b.sku.toUpperCase()
+        const cleanQuery = query.toUpperCase()
+        
+        // Exact match gets highest priority
+        if (aSku === cleanQuery) return -1
+        if (bSku === cleanQuery) return 1
+        
+        // Contains match gets second priority
+        if (aSku.includes(cleanQuery) && !bSku.includes(cleanQuery)) return -1
+        if (bSku.includes(cleanQuery) && !aSku.includes(cleanQuery)) return 1
+        
+        // Alphabetical order for ties
+        return aSku.localeCompare(bSku)
+      })
+      
+      console.log('Global search results:', sortedResults.length)
+      setGlobalSearchResults(sortedResults)
+      
     } catch (error) {
       console.error('Global search error:', error)
       showNotification('error', 'Failed to search items')
