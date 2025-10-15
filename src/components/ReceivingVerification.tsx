@@ -27,11 +27,20 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
   const [showModal, setShowModal] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [autoSelectedItem, setAutoSelectedItem] = useState<string | null>(null)
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
 
   const pendingItems = items.filter(item => item.status === 'pending')
   const verifiedItems = items.filter(item => item.status === 'verified')
   const discrepancyItems = items.filter(item => item.status === 'discrepancy')
   const progressPercentage = (verifiedItems.length / items.length) * 100
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message })
+    // Auto-clear notification after 4 seconds
+    setTimeout(() => {
+      setNotification(null)
+    }, 4000)
+  }
 
   const handleItemSelect = (item: ReceivingItem) => {
     setCurrentItem(item)
@@ -91,14 +100,11 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
       }, 3000)
       
       // Show success notification
-      const successMessage = `✅ Item auto-selected: ${foundItem.sku}\n\nOpening verification modal...`
-      setTimeout(() => {
-        alert(successMessage)
-      }, 100) // Small delay to ensure modal is opening
+      showNotification('success', `Item auto-selected: ${foundItem.sku}. Opening verification modal...`)
     } else {
-      // Show more helpful error message
-      const message = `❌ Barcode "${barcode}" not found in the verification list.\n\nAvailable SKUs:\n${items.map(item => `• ${item.sku}`).join('\n')}\n\nPlease select the item manually.`
-      alert(message)
+      // Show error notification
+      const availableSkus = items.map(item => item.sku).join(', ')
+      showNotification('error', `Barcode "${barcode}" not found. Available SKUs: ${availableSkus}`)
     }
   }
 
@@ -109,6 +115,18 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
 
   return (
     <div className="receiving-verification">
+      {/* Notification */}
+      {notification && (
+        <div className={`alert alert-${notification.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`} 
+             style={{ top: '20px', right: '20px', zIndex: 9999, minWidth: '300px' }}>
+          <div className="d-flex align-items-center">
+            <i className={`bi ${notification.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
+            <span>{notification.message}</span>
+          </div>
+          <button type="button" className="btn-close" onClick={() => setNotification(null)}></button>
+        </div>
+      )}
+
       {/* Progress Overview */}
       <div className="card card-enhanced mb-4">
         <div className="card-header bg-transparent border-0">

@@ -42,6 +42,7 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   const [scanMode, setScanMode] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [autoSelectedSku, setAutoSelectedSku] = useState<string | null>(null)
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
 
   const fetchSession = useCallback(async () => {
     try {
@@ -62,6 +63,13 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     fetchSession()
   }, [fetchSession])
 
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message })
+    // Auto-clear notification after 4 seconds
+    setTimeout(() => {
+      setNotification(null)
+    }, 4000)
+  }
 
   const handleManualSearch = () => {
     if (!session || !searchTerm) return
@@ -161,14 +169,11 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       }, 3000)
       
       // Show success notification
-      const successMessage = `✅ Item auto-selected: ${foundItem.item.sku}\n\nReady to count! Quantity set to 1.\n\nAdjust quantity if needed and click "Add Count".`
-      setTimeout(() => {
-        alert(successMessage)
-      }, 100) // Small delay to ensure UI updates
+      showNotification('success', `Item auto-selected: ${foundItem.item.sku}. Ready to count! Quantity set to 1.`)
     } else {
-      // Show more helpful error message
+      // Show error notification
       const availableSkus = session.items.map(si => si.item.sku).join(', ')
-      alert(`❌ Barcode "${barcode}" not found in this session.\n\nAvailable SKUs: ${availableSkus}\n\nPlease select item manually.`)
+      showNotification('error', `Barcode "${barcode}" not found. Available SKUs: ${availableSkus}`)
     }
   }
 
@@ -219,6 +224,18 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
 
   return (
     <Layout>
+      {/* Notification */}
+      {notification && (
+        <div className={`alert alert-${notification.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`} 
+             style={{ top: '20px', right: '20px', zIndex: 9999, minWidth: '300px' }}>
+          <div className="d-flex align-items-center">
+            <i className={`bi ${notification.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
+            <span>{notification.message}</span>
+          </div>
+          <button type="button" className="btn-close" onClick={() => setNotification(null)}></button>
+        </div>
+      )}
+
       <div className="animate-fade-in">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
