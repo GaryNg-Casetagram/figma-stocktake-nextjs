@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "mv .env.production .env.production.bak 2>/dev/null || true && next build --turbopack && mv .env.production.bak .env.production 2>/dev/null || true",
+    "build:prod": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "prisma generate",

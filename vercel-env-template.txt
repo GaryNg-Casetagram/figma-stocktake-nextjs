@@ -1,0 +1,21 @@
+# StockTake Pro - Production Environment Variables
+# Copy these to your Vercel dashboard under Settings > Environment Variables
+
+# Database Configuration
+DATABASE_URL="postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require"
+
+# Application Configuration
+NEXT_PUBLIC_APP_URL="https://your-app-name.vercel.app"
+NEXT_PUBLIC_APP_NAME="StockTake Pro"
+NEXT_PUBLIC_APP_VERSION="1.0.0"
+
+# Prisma Configuration
+PRISMA_GENERATE_DATAPROXY="false"
+
+# Next.js Configuration
+NODE_ENV="production"
+NEXT_TELEMETRY_DISABLED="1"
+
+# Security (Optional - for future features)
+# NEXTAUTH_SECRET="your-secret-key-here"
+# NEXTAUTH_URL="https://your-app-name.vercel.app"

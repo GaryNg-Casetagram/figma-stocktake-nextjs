@@ -24,9 +24,10 @@ async function getSession(id: string) {
 export default async function SessionSummaryPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const session = await getSession(params.id)
+  const { id } = await params
+  const session = await getSession(id)
 
   if (!session) {
     return (

@@ -32,7 +32,7 @@ interface Session {
   }[]
 }
 
-export default function CountPage({ params }: { params: { id: string } }) {
+export default function CountPage({ params }: { params: Promise<{ id: string }> }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -42,7 +42,8 @@ export default function CountPage({ params }: { params: { id: string } }) {
 
   const fetchSession = useCallback(async () => {
     try {
-      const response = await fetch(`/api/sessions/${params.id}`)
+      const { id } = await params
+      const response = await fetch(`/api/sessions/${id}`)
       if (response.ok) {
         const data = await response.json()
         setSession(data)
@@ -52,7 +53,7 @@ export default function CountPage({ params }: { params: { id: string } }) {
     } finally {
       setLoading(false)
     }
-  }, [params.id])
+  }, [params])
 
   useEffect(() => {
     fetchSession()
