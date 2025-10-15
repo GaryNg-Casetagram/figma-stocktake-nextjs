@@ -43,6 +43,11 @@ export default function SessionSummaryPage({
   const [loading, setLoading] = useState(true)
   const [id, setId] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [showAddItemModal, setShowAddItemModal] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+  const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null)
 
   useEffect(() => {
     const getSessionId = async () => {
@@ -179,8 +184,77 @@ export default function SessionSummaryPage({
     // TODO: Implement item click functionality
   }
 
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message })
+    setTimeout(() => setNotification(null), 4000)
+  }
+
+  const handleSearchItems = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    setSearching(true)
+    try {
+      const response = await fetch(`/api/items/search?q=${encodeURIComponent(query)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setSearchResults(data.items)
+      } else {
+        showNotification('error', 'Failed to search items')
+      }
+    } catch (error) {
+      console.error('Search error:', error)
+      showNotification('error', 'Failed to search items')
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const handleAddItemToSession = async (itemSku: string) => {
+    try {
+      const response = await fetch(`/api/sessions/${id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: id, itemSku })
+      })
+
+      if (response.ok) {
+        showNotification('success', `Item "${itemSku}" added to session successfully`)
+        // Refresh session data
+        const sessionResponse = await fetch(`/api/sessions/${id}`)
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json()
+          setSession(sessionData)
+        }
+        setShowAddItemModal(false)
+        setSearchQuery('')
+        setSearchResults([])
+      } else {
+        const errorData = await response.json()
+        showNotification('error', errorData.error || 'Failed to add item to session')
+      }
+    } catch (error) {
+      console.error('Add item error:', error)
+      showNotification('error', 'Failed to add item to session')
+    }
+  }
+
   return (
     <Layout>
+      {/* Notification */}
+      {notification && (
+        <div className={`alert alert-${notification.type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`} 
+             style={{ top: '20px', right: '20px', zIndex: 9999, minWidth: '300px' }}>
+          <div className="d-flex align-items-center">
+            <i className={`bi ${notification.type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill'} me-2`}></i>
+            <span>{notification.message}</span>
+          </div>
+          <button type="button" className="btn-close" onClick={() => setNotification(null)}></button>
+        </div>
+      )}
+
       <div className="animate-fade-in">
                {/* Header - Responsive */}
                <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4">
@@ -205,9 +279,18 @@ export default function SessionSummaryPage({
                    </div>
                  </div>
                  <div className="d-flex flex-column flex-sm-row gap-2 w-100 w-lg-auto">
+                   <button
+                     className="btn btn-gradient-primary btn-lg order-1"
+                     onClick={() => setShowAddItemModal(true)}
+                   >
+                     <i className="bi bi-plus-circle me-2"></i>
+                     <span className="d-none d-sm-inline">Add Items</span>
+                     <span className="d-inline d-sm-none">Add</span>
+                   </button>
                    <Link
                      href={`/sessions/${session.id}/count`}
-                     className="btn btn-gradient-success btn-lg order-1"
+                     className="btn btn-gradient-success btn-lg order-2"
+                     style={{ opacity: session.items.length === 0 ? 0.5 : 1 }}
                    >
                      <i className="bi bi-play-circle me-2"></i>
                      <span className="d-none d-sm-inline">{isReceivingVerification ? 'Start Verification' : 'Start Counting'}</span>
@@ -215,7 +298,7 @@ export default function SessionSummaryPage({
                    </Link>
                    <Link
                      href="/sessions"
-                     className="btn btn-outline-secondary btn-lg order-2"
+                     className="btn btn-outline-secondary btn-lg order-3"
                    >
                      <i className="bi bi-arrow-left me-2"></i>
                      <span className="d-none d-sm-inline">Back to Sessions</span>
@@ -245,11 +328,163 @@ export default function SessionSummaryPage({
           </div>
         )}
 
+        {/* Empty State */}
+        {session.items.length === 0 && (
+          <div className="card card-enhanced">
+            <div className="card-body text-center py-5">
+              <i className="bi bi-inbox text-muted" style={{ fontSize: '4rem' }}></i>
+              <h3 className="text-muted mt-3 mb-3">No Items in Session</h3>
+              <p className="text-muted mb-4">
+                This session is empty. Add items by scanning barcodes or searching for products.
+              </p>
+              <button
+                className="btn btn-gradient-primary btn-lg"
+                onClick={() => setShowAddItemModal(true)}
+              >
+                <i className="bi bi-plus-circle me-2"></i>
+                Add Items to Session
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Session Items Summary */}
-        <SessionItemsSummary
-          items={sessionItems}
-          onItemClick={handleItemClick}
-        />
+        {session.items.length > 0 && (
+          <SessionItemsSummary
+            items={sessionItems}
+            onItemClick={handleItemClick}
+          />
+        )}
+
+        {/* Add Item Modal */}
+        {showAddItemModal && (
+          <div className="modal show d-block" tabIndex={-1} style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    <i className="bi bi-plus-circle me-2"></i>
+                    Add Items to Session
+                  </h5>
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    onClick={() => {
+                      setShowAddItemModal(false)
+                      setSearchQuery('')
+                      setSearchResults([])
+                    }}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <div className="mb-4">
+                    <label htmlFor="searchInput" className="form-label fw-medium">
+                      Search Items by SKU, Device Type, Color, or Case Type
+                    </label>
+                    <div className="input-group">
+                      <input
+                        type="text"
+                        id="searchInput"
+                        className="form-control form-control-lg"
+                        placeholder="Enter SKU or search term..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value)
+                          handleSearchItems(e.target.value)
+                        }}
+                      />
+                      <button 
+                        className="btn btn-outline-secondary" 
+                        type="button"
+                        onClick={() => handleSearchItems(searchQuery)}
+                      >
+                        <i className="bi bi-search"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search Results */}
+                  {searching && (
+                    <div className="text-center py-3">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Searching...</span>
+                      </div>
+                      <p className="mt-2 text-muted">Searching items...</p>
+                    </div>
+                  )}
+
+                  {searchResults.length > 0 && (
+                    <div className="mb-3">
+                      <h6 className="fw-medium mb-3">Search Results ({searchResults.length})</h6>
+                      <div className="row g-3">
+                        {searchResults.map((item) => (
+                          <div key={item.id} className="col-md-6">
+                            <div className="card h-100">
+                              <div className="card-body">
+                                <div className="d-flex align-items-start">
+                                  <div className="me-3">
+                                    {item.image ? (
+                                      <img 
+                                        src={item.image} 
+                                        alt={item.sku}
+                                        className="rounded"
+                                        style={{ width: '50px', height: '50px', objectFit: 'cover' }}
+                                      />
+                                    ) : (
+                                      <div className="bg-light rounded d-flex align-items-center justify-content-center" 
+                                           style={{ width: '50px', height: '50px' }}>
+                                        <i className="bi bi-box text-muted"></i>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex-grow-1">
+                                    <h6 className="fw-bold mb-1">{item.sku}</h6>
+                                    <p className="text-muted small mb-2">
+                                      {item.deviceType} - {item.colour} - {item.caseType}
+                                    </p>
+                                    {item.isRfidItem && (
+                                      <span className="badge bg-primary small">RFID</span>
+                                    )}
+                                  </div>
+                                  <button
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={() => handleAddItemToSession(item.sku)}
+                                  >
+                                    <i className="bi bi-plus"></i>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {searchQuery && !searching && searchResults.length === 0 && (
+                    <div className="text-center py-4">
+                      <i className="bi bi-search text-muted" style={{ fontSize: '2rem' }}></i>
+                      <p className="text-muted mt-2">No items found matching "{searchQuery}"</p>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowAddItemModal(false)
+                      setSearchQuery('')
+                      setSearchResults([])
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )

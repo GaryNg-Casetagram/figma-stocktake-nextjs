@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the session
+    // Create the session (empty - no items added automatically)
     const session = await prisma.session.create({
       data: {
         name,
@@ -55,23 +55,14 @@ export async function POST(request: NextRequest) {
         locationId,
       },
       include: {
-        location: true
+        location: true,
+        items: {
+          include: {
+            item: true
+          }
+        }
       }
     })
-
-    // Add some default items to the session (first 5 items)
-    const items = await prisma.item.findMany({
-      take: 5,
-    })
-
-    for (const item of items) {
-      await prisma.sessionItem.create({
-        data: {
-          sessionId: session.id,
-          itemId: item.id,
-        },
-      })
-    }
 
     return NextResponse.json(session)
   } catch (error) {
