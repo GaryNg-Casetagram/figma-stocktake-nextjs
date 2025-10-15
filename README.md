@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StockTake Pro - Advanced Inventory Management
+
+A modern, professional inventory management and stock counting solution built with Next.js, Bootstrap, and Prisma.
+
+## Features
+
+- 🏠 **Dashboard**: Overview with analytics and quick actions
+- 📋 **Session Management**: Create and manage stock take sessions
+- 📦 **Inventory Tracking**: Real-time item counting and tracking
+- 📊 **Reports**: Analytics and reporting capabilities
+- 🎨 **Modern UI**: Bootstrap-powered responsive design
+- 🔍 **Barcode Support**: Ready for barcode scanning integration
+- 📱 **Mobile Friendly**: Responsive design for all devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, Bootstrap 5, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: SQLite (dev) / PostgreSQL (production)
+- **Deployment**: Vercel
+- **Icons**: Bootstrap Icons
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- npm or yarn
+- Git
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo-url>
+cd figma-stocktake-nextjs
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Set up the database:
+```bash
+npm run db:push
+npm run db:seed
+```
 
-## Learn More
+5. Start the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Visit `http://localhost:3000` to see the application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Deploy to Vercel
 
-## Deploy on Vercel
+1. **Install Vercel CLI** (if not already installed):
+```bash
+npm install -g vercel
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Login to Vercel**:
+```bash
+vercel login
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Set up production database**:
+   - Create a PostgreSQL database (recommended: Neon, Supabase, or PlanetScale)
+   - Add the database URL to your environment variables
+
+4. **Deploy**:
+```bash
+vercel --prod
+```
+
+### Environment Variables
+
+Set these environment variables in your Vercel dashboard:
+
+- `DATABASE_URL`: Your PostgreSQL connection string
+- `NEXT_PUBLIC_APP_URL`: Your deployed app URL
+
+### Database Setup for Production
+
+1. **Push schema to production database**:
+```bash
+npx prisma db push --schema=./prisma/schema.prisma
+```
+
+2. **Seed production database**:
+```bash
+npm run db:seed
+```
+
+## Project Structure
+
+```
+src/
+├── app/                 # Next.js app directory
+│   ├── api/            # API routes
+│   ├── sessions/       # Session pages
+│   └── globals.css     # Global styles
+├── components/         # React components
+│   ├── layout.tsx      # Main layout
+│   └── sidebar.tsx     # Navigation sidebar
+└── lib/               # Utilities
+    ├── prisma.ts      # Prisma client
+    └── utils.ts       # Helper functions
+```
+
+## API Endpoints
+
+- `GET /api/locations` - Get all locations
+- `POST /api/sessions` - Create new session
+- `GET /api/sessions/[id]` - Get session details
+- `POST /api/counts` - Submit count data
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support or questions, please open an issue in the repository.

@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id     String @id @default(cuid())
+  name   String
+  access String
+  title  String
+  
+  @@map("users")
+}
+
+model Location {
+  id       String @id @default(cuid())
+  name     String
+  locale   String
+  sessions Session[]
+  
+  @@map("locations")
+}
+
+model Session {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  locationId  String
+  location    Location @relation(fields: [locationId], references: [id])
+  items       SessionItem[]
+  counts      Count[]
+  
+  @@map("sessions")
+}
+
+model Item {
+  id         String @id @default(cuid())
+  sku        String @unique
+  deviceType String
+  colour     String
+  caseType   String
+  sessions   SessionItem[]
+  
+  @@map("items")
+}
+
+model SessionItem {
+  id        String @id @default(cuid())
+  sessionId String
+  itemId    String
+  session   Session @relation(fields: [sessionId], references: [id])
+  item      Item @relation(fields: [itemId], references: [id])
+  
+  @@unique([sessionId, itemId])
+  @@map("session_items")
+}
+
+model Count {
+  id        String @id @default(cuid())
+  sessionId String
+  itemId    String
+  quantity  Int
+  countNumber Int
+  createdAt DateTime @default(now())
+  session   Session @relation(fields: [sessionId], references: [id])
+  
+  @@map("counts")
+}
