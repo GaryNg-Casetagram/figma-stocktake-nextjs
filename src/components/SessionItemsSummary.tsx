@@ -204,92 +204,132 @@ export default function SessionItemsSummary({ items, onItemClick }: SessionItems
         </div>
       </div>
 
-      {/* Items List - Responsive */}
-      <div className="row g-3">
-        {filteredItems.map((item) => {
-          const { label, variant } = getItemStatus(item)
-          const progress = getItemProgress(item)
-          const isExpanded = expandedItem === item.id
+      {/* Items List */}
+      <div className="card card-enhanced">
+        <div className="card-header bg-transparent border-0">
+          <h5 className="mb-0">
+            <i className="bi bi-list-ul me-2"></i>
+            Items ({filteredItems.length})
+          </h5>
+        </div>
+        <div className="card-body p-0">
+          {filteredItems.map((item, index) => {
+            const { label, variant } = getItemStatus(item)
+            const progress = getItemProgress(item)
+            const isExpanded = expandedItem === item.id
 
-          return (
-            <div key={item.id} className="col-12 col-sm-6 col-lg-4 col-xl-3">
+            return (
               <div 
-                className={`card card-enhanced h-100 ${onItemClick ? 'cursor-pointer' : ''}`}
-                onClick={() => onItemClick?.(item)}
-                style={{ cursor: onItemClick ? 'pointer' : 'default' }}
+                key={item.id} 
+                className={`border-bottom ${index === filteredItems.length - 1 ? 'border-0' : ''}`}
               >
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <h6 className="fw-bold mb-0">{item.sku}</h6>
-                    <span className={`badge bg-${variant}`}>{label}</span>
-                  </div>
-                  
-                  <p className="text-muted small mb-3">
-                    {item.deviceType} - {item.colour} - {item.caseType}
-                  </p>
-
-                  {/* Progress Bar */}
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between mb-1">
-                      <small className="text-muted">Progress</small>
-                      <small className="text-muted">{progress}%</small>
+                <div 
+                  className={`p-3 ${onItemClick ? 'cursor-pointer' : ''}`}
+                  onClick={() => onItemClick?.(item)}
+                  style={{ cursor: onItemClick ? 'pointer' : 'default' }}
+                >
+                  <div className="row align-items-center">
+                    {/* Item Info */}
+                    <div className="col-12 col-md-4 col-lg-3 mb-2 mb-md-0">
+                      <div className="d-flex align-items-center">
+                        <div className="me-3">
+                          <div className={`bg-${variant} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center`} 
+                               style={{ width: '40px', height: '40px' }}>
+                            <i className={`bi bi-${variant === 'warning' ? 'clock' : variant === 'info' ? 'arrow-repeat' : 'check-circle'} text-${variant}`}></i>
+                          </div>
+                        </div>
+                        <div>
+                          <h6 className="fw-bold mb-0">{item.sku}</h6>
+                          <small className="text-muted d-none d-md-block">
+                            {item.deviceType} - {item.colour} - {item.caseType}
+                          </small>
+                          <small className="text-muted d-block d-md-none">
+                            {item.deviceType} - {item.colour}
+                          </small>
+                        </div>
+                      </div>
                     </div>
-                    <div className="progress" style={{ height: '6px' }}>
-                      <div 
-                        className={`progress-bar bg-${variant}`}
-                        role="progressbar" 
-                        style={{ width: `${progress}%` }}
-                      ></div>
+
+                    {/* Status */}
+                    <div className="col-6 col-md-2 col-lg-2 mb-2 mb-md-0">
+                      <span className={`badge bg-${variant} w-100`}>{label}</span>
+                    </div>
+
+                    {/* Progress */}
+                    <div className="col-6 col-md-3 col-lg-3 mb-2 mb-md-0">
+                      <div className="d-flex align-items-center">
+                        <div className="flex-grow-1 me-2">
+                          <div className="progress" style={{ height: '8px' }}>
+                            <div 
+                              className={`progress-bar bg-${variant}`}
+                              role="progressbar" 
+                              style={{ width: `${progress}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        <small className="text-muted fw-medium">{progress}%</small>
+                      </div>
+                    </div>
+
+                    {/* Counts */}
+                    <div className="col-6 col-md-2 col-lg-2 mb-2 mb-md-0">
+                      <div className="text-center">
+                        <span className="fw-bold text-primary fs-5">{item.counts.length}</span>
+                        <small className="text-muted d-block">/ 3 counts</small>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="col-6 col-md-1 col-lg-2 text-end mb-2 mb-md-0">
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setExpandedItem(isExpanded ? null : item.id)
+                        }}
+                      >
+                        <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'}`}></i>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Count Summary */}
-                  <div className="d-flex justify-content-between align-items-center mb-2">
-                    <span className="text-muted small">Counts:</span>
-                    <span className="fw-medium">{item.counts.length}/3</span>
-                  </div>
-
-                  {/* Expandable Count Details */}
-                  <button
-                    className="btn btn-outline-secondary btn-sm w-100"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setExpandedItem(isExpanded ? null : item.id)
-                    }}
-                  >
-                    <i className={`bi ${isExpanded ? 'bi-chevron-up' : 'bi-chevron-down'} me-1`}></i>
-                    {isExpanded ? 'Hide' : 'Show'} Details
-                  </button>
-
+                  {/* Expanded Details */}
                   {isExpanded && (
-                    <div className="mt-3">
-                      {item.counts.length > 0 ? (
-                        <div className="d-grid gap-2">
-                          {item.counts.map((count) => (
-                            <div key={count.id} className="d-flex justify-content-between align-items-center p-2 bg-light rounded">
-                              <span className="small">
-                                <i className="bi bi-1-circle me-1"></i>
-                                Count {count.countNumber}
-                              </span>
-                              <span className="badge bg-light text-dark">
-                                {count.quantity}
-                              </span>
+                    <div className="mt-3 pt-3 border-top">
+                      <div className="row">
+                        <div className="col-12">
+                          <h6 className="fw-medium mb-3">Count Details</h6>
+                          {item.counts.length > 0 ? (
+                            <div className="row g-2">
+                              {item.counts.map((count) => (
+                                <div key={count.id} className="col-md-4">
+                                  <div className="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                                    <span className="small">
+                                      <i className="bi bi-1-circle me-1"></i>
+                                      Count {count.countNumber}
+                                    </span>
+                                    <span className="badge bg-primary">
+                                      {count.quantity}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          ) : (
+                            <div className="text-center text-muted py-3">
+                              <i className="bi bi-dash-circle me-1"></i>
+                              No counts recorded yet
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="text-center text-muted py-2">
-                          <i className="bi bi-dash-circle me-1"></i>
-                          No counts yet
-                        </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
 
       {/* Empty State */}
