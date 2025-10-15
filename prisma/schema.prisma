@@ -41,12 +41,16 @@ model Session {
 }
 
 model Item {
-  id         String @id @default(cuid())
-  sku        String @unique
-  deviceType String
-  colour     String
-  caseType   String
-  sessions   SessionItem[]
+  id           String @id @default(cuid())
+  sku          String @unique
+  deviceType   String
+  colour       String
+  caseType     String
+  description  String?
+  itemOption   String?
+  isRfidItem   Boolean @default(false)
+  image        String?
+  sessions     SessionItem[]
   
   @@map("items")
 }

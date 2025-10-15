@@ -8,6 +8,10 @@ interface SessionItem {
   deviceType: string
   colour: string
   caseType: string
+  description?: string
+  itemOption?: string
+  isRfidItem?: boolean
+  image?: string
   counts: Array<{
     id: string
     quantity: number
@@ -233,13 +237,36 @@ export default function SessionItemsSummary({ items, onItemClick }: SessionItems
                     <div className="col-12 col-md-4 col-lg-3 mb-2 mb-md-0">
                       <div className="d-flex align-items-center">
                         <div className="me-3">
-                          <div className={`bg-${variant} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center`} 
-                               style={{ width: '40px', height: '40px' }}>
-                            <i className={`bi bi-${variant === 'warning' ? 'clock' : variant === 'info' ? 'arrow-repeat' : 'check-circle'} text-${variant}`}></i>
+                          {/* Item Image */}
+                          <div className="position-relative">
+                            <div className={`bg-${variant} bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center`} 
+                                 style={{ width: '40px', height: '40px' }}>
+                              {item.image ? (
+                                <img 
+                                  src={item.image} 
+                                  alt={item.sku}
+                                  className="rounded-circle"
+                                  style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                <i className={`bi bi-${variant === 'warning' ? 'clock' : variant === 'info' ? 'arrow-repeat' : 'check-circle'} text-${variant}`}></i>
+                              )}
+                            </div>
+                            {/* RFID Indicator */}
+                            {item.isRfidItem && (
+                              <div className="position-absolute top-0 end-0">
+                                <i className="bi bi-wifi text-primary" style={{ fontSize: '10px' }} title="RFID Item"></i>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div>
-                          <h6 className="fw-bold mb-0">{item.sku}</h6>
+                          <h6 className="fw-bold mb-0">
+                            {item.sku}
+                            {item.isRfidItem && (
+                              <i className="bi bi-wifi text-primary ms-1" style={{ fontSize: '12px' }} title="RFID Item"></i>
+                            )}
+                          </h6>
                           <small className="text-muted d-none d-md-block">
                             {item.deviceType} - {item.colour} - {item.caseType}
                           </small>
@@ -298,6 +325,31 @@ export default function SessionItemsSummary({ items, onItemClick }: SessionItems
                     <div className="mt-3 pt-3 border-top">
                       <div className="row">
                         <div className="col-12">
+                          {/* Item Details */}
+                          <div className="mb-3">
+                            <h6 className="fw-medium mb-2">Item Details</h6>
+                            <div className="row g-2">
+                              <div className="col-md-6">
+                                <small className="text-muted">Description:</small>
+                                <div className="small">{item.description || 'No description available'}</div>
+                              </div>
+                              <div className="col-md-3">
+                                <small className="text-muted">Item Option:</small>
+                                <div className="small">{item.itemOption || 'N/A'}</div>
+                              </div>
+                              <div className="col-md-3">
+                                <small className="text-muted">Type:</small>
+                                <div className="small">
+                                  {item.isRfidItem ? (
+                                    <span className="badge bg-primary">RFID Item</span>
+                                  ) : (
+                                    <span className="badge bg-secondary">Non-RFID</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
                           <h6 className="fw-medium mb-3">Count Details</h6>
                           {item.counts.length > 0 ? (
                             <div className="row g-2">

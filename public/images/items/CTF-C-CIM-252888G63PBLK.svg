@@ -1,0 +1,7 @@
+
+<svg width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="300" fill="#000000" stroke="#ddd" stroke-width="2"/>
+  <rect x="50" y="50" width="200" height="200" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+  <text x="150" y="160" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Impact Case Black</text>
+  <text x="150" y="180" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial, sans-serif" font-size="10">CTF-C-CIM-252888G63PBLK</text>
+</svg>
