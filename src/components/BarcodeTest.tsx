@@ -7,6 +7,7 @@ export default function BarcodeTest() {
   const [showScanner, setShowScanner] = useState(false)
   const [lastScan, setLastScan] = useState<string>('')
   const [scanHistory, setScanHistory] = useState<string[]>([])
+  const [selectedFormat, setSelectedFormat] = useState<'all' | 'barcode' | 'qr'>('all')
 
   const handleScan = (result: string) => {
     setLastScan(result)
@@ -31,12 +32,43 @@ export default function BarcodeTest() {
             </div>
             <div className="card-body">
               <div className="d-grid gap-3">
+                {/* Format Selection */}
+                <div>
+                  <label className="form-label fw-medium">Scan Format:</label>
+                  <div className="btn-group w-100" role="group">
+                    <button
+                      type="button"
+                      className={`btn ${selectedFormat === 'all' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setSelectedFormat('all')}
+                    >
+                      <i className="bi bi-grid me-1"></i>
+                      All Formats
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${selectedFormat === 'barcode' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setSelectedFormat('barcode')}
+                    >
+                      <i className="bi bi-upc-scan me-1"></i>
+                      Barcode Only
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${selectedFormat === 'qr' ? 'btn-primary' : 'btn-outline-primary'}`}
+                      onClick={() => setSelectedFormat('qr')}
+                    >
+                      <i className="bi bi-qr-code-scan me-1"></i>
+                      QR Code Only
+                    </button>
+                  </div>
+                </div>
+
                 <button
                   className="btn btn-primary btn-lg"
                   onClick={() => setShowScanner(true)}
                 >
                   <i className="bi bi-camera me-2"></i>
-                  Test Barcode Scanner
+                  Test {selectedFormat === 'qr' ? 'QR Code' : selectedFormat === 'barcode' ? 'Barcode' : 'Barcode/QR Code'} Scanner
                 </button>
 
                 {lastScan && (
@@ -88,6 +120,7 @@ export default function BarcodeTest() {
         onClose={() => setShowScanner(false)}
         onScan={handleScan}
         onError={handleError}
+        defaultFormat={selectedFormat}
       />
     </div>
   )

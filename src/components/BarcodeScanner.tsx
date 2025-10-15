@@ -2,20 +2,25 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/browser'
+import { BarcodeFormat } from '@zxing/library'
+
+type ScanFormat = 'all' | 'barcode' | 'qr'
 
 interface BarcodeScannerProps {
   isOpen: boolean
   onClose: () => void
   onScan: (result: string) => void
   onError?: (error: string) => void
+  defaultFormat?: ScanFormat
 }
 
-export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: BarcodeScannerProps) {
+export default function BarcodeScanner({ isOpen, onClose, onScan, onError, defaultFormat = 'all' }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string>('')
   const [hasPermission, setHasPermission] = useState<boolean | null>(null)
   const [isInitializing, setIsInitializing] = useState(false)
+  const [scanFormat, setScanFormat] = useState<ScanFormat>(defaultFormat)
   const readerRef = useRef<BrowserMultiFormatReader | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const scanningIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -31,6 +36,53 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
       stopScanning()
     }
   }, [isOpen])
+
+  const getBarcodeFormats = (format: ScanFormat): BarcodeFormat[] => {
+    switch (format) {
+      case 'barcode':
+        return [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.CODE_39,
+          BarcodeFormat.CODE_93,
+          BarcodeFormat.CODABAR,
+          BarcodeFormat.ITF,
+          BarcodeFormat.RSS_14,
+          BarcodeFormat.RSS_EXPANDED
+        ]
+      case 'qr':
+        return [
+          BarcodeFormat.QR_CODE,
+          BarcodeFormat.DATA_MATRIX,
+          BarcodeFormat.AZTEC,
+          BarcodeFormat.PDF_417,
+          BarcodeFormat.MAXICODE
+        ]
+      case 'all':
+      default:
+        return [
+          BarcodeFormat.EAN_13,
+          BarcodeFormat.EAN_8,
+          BarcodeFormat.UPC_A,
+          BarcodeFormat.UPC_E,
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.CODE_39,
+          BarcodeFormat.CODE_93,
+          BarcodeFormat.CODABAR,
+          BarcodeFormat.ITF,
+          BarcodeFormat.RSS_14,
+          BarcodeFormat.RSS_EXPANDED,
+          BarcodeFormat.QR_CODE,
+          BarcodeFormat.DATA_MATRIX,
+          BarcodeFormat.AZTEC,
+          BarcodeFormat.PDF_417,
+          BarcodeFormat.MAXICODE
+        ]
+    }
+  }
 
   const initializeScanner = async () => {
     try {
@@ -78,8 +130,12 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
         })
       }
 
-      // Initialize ZXing reader
+      // Initialize ZXing reader with specific formats
       readerRef.current = new BrowserMultiFormatReader()
+      
+      // Configure reader with selected formats
+      const formats = getBarcodeFormats(scanFormat)
+      readerRef.current.hints.set('POSSIBLE_FORMATS', formats)
       
       // Start scanning after a short delay
       setTimeout(() => {
@@ -175,6 +231,16 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
     }, 500)
   }
 
+  const handleFormatChange = (newFormat: ScanFormat) => {
+    setScanFormat(newFormat)
+    if (isScanning) {
+      stopScanning()
+      setTimeout(() => {
+        initializeScanner()
+      }, 500)
+    }
+  }
+
   if (!isOpen) return null
 
   return (
@@ -184,13 +250,43 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
           <div className="modal-header border-0">
             <h5 className="modal-title text-white">
               <i className="bi bi-upc-scan me-2"></i>
-              Scan Barcode
+              Scan {scanFormat === 'qr' ? 'QR Code' : scanFormat === 'barcode' ? 'Barcode' : 'Barcode/QR Code'}
             </h5>
             <button 
               type="button" 
               className="btn-close btn-close-white" 
               onClick={handleClose}
             ></button>
+          </div>
+          
+          {/* Format Selection */}
+          <div className="px-3 py-2 bg-dark border-bottom">
+            <div className="btn-group w-100" role="group">
+              <button
+                type="button"
+                className={`btn btn-sm ${scanFormat === 'all' ? 'btn-primary' : 'btn-outline-light'}`}
+                onClick={() => handleFormatChange('all')}
+              >
+                <i className="bi bi-grid me-1"></i>
+                All
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${scanFormat === 'barcode' ? 'btn-primary' : 'btn-outline-light'}`}
+                onClick={() => handleFormatChange('barcode')}
+              >
+                <i className="bi bi-upc-scan me-1"></i>
+                Barcode
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${scanFormat === 'qr' ? 'btn-primary' : 'btn-outline-light'}`}
+                onClick={() => handleFormatChange('qr')}
+              >
+                <i className="bi bi-qr-code-scan me-1"></i>
+                QR Code
+              </button>
+            </div>
           </div>
           
           <div className="modal-body p-0 position-relative">
@@ -272,7 +368,7 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
                         )}
                         
                         <p className="mb-0">
-                          {isScanning ? 'Point camera at barcode' : 'Preparing camera...'}
+                          {isScanning ? `Point camera at ${scanFormat === 'qr' ? 'QR code' : scanFormat === 'barcode' ? 'barcode' : 'barcode or QR code'}` : 'Preparing camera...'}
                         </p>
                       </>
                     )}
@@ -284,10 +380,10 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError }: Bar
                   <div className="text-center text-white">
                     <p className="mb-2">
                       <i className="bi bi-info-circle me-2"></i>
-                      Position the barcode within the frame
+                      Position the {scanFormat === 'qr' ? 'QR code' : scanFormat === 'barcode' ? 'barcode' : 'barcode or QR code'} within the frame
                     </p>
                     <small className="text-muted">
-                      Make sure the barcode is well-lit and clearly visible
+                      Make sure the {scanFormat === 'qr' ? 'QR code' : scanFormat === 'barcode' ? 'barcode' : 'code'} is well-lit and clearly visible
                     </small>
                   </div>
                 </div>

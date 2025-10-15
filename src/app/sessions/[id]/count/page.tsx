@@ -379,6 +379,7 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
         onClose={() => setShowScanner(false)}
         onScan={handleScanResult}
         onError={handleScanError}
+        defaultFormat="barcode"
       />
     </Layout>
   )

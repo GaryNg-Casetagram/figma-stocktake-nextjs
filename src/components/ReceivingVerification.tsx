@@ -316,13 +316,14 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
         </div>
       )}
 
-      {/* Barcode Scanner */}
-      <BarcodeScanner
-        isOpen={showScanner}
-        onClose={() => setShowScanner(false)}
-        onScan={handleScanResult}
-        onError={handleScanError}
-      />
+       {/* Barcode Scanner */}
+       <BarcodeScanner
+         isOpen={showScanner}
+         onClose={() => setShowScanner(false)}
+         onScan={handleScanResult}
+         onError={handleScanError}
+         defaultFormat="barcode"
+       />
     </div>
   )
 }
