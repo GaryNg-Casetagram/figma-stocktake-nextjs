@@ -121,13 +121,6 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError, defau
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
-        
-        // Wait for video to be ready
-        await new Promise((resolve) => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = resolve
-          }
-        })
       }
 
       // Initialize ZXing reader with specific formats
@@ -135,12 +128,14 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError, defau
       
       // Configure reader with selected formats
       const formats = getBarcodeFormats(scanFormat)
-      readerRef.current.hints.set('POSSIBLE_FORMATS', formats)
+      // Note: Format configuration may not be available in browser version
+      console.log('Configured formats:', formats)
       
-      // Start scanning after a short delay
+      // Start scanning with a longer delay to ensure video is ready
       setTimeout(() => {
+        console.log('Starting scanner after delay...')
         startScanning()
-      }, 1000)
+      }, 2000) // Increased delay to ensure video is ready
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to access camera'
@@ -152,42 +147,47 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError, defau
   }
 
   const startScanning = async () => {
-    if (!readerRef.current || !videoRef.current || !isOpen) return
+    console.log('startScanning called', { 
+      hasReader: !!readerRef.current, 
+      hasVideo: !!videoRef.current, 
+      isOpen, 
+      videoReadyState: videoRef.current?.readyState 
+    })
+    
+    if (!readerRef.current || !videoRef.current || !isOpen) {
+      console.log('Missing requirements for scanning')
+      return
+    }
 
     try {
       setIsScanning(true)
       setIsInitializing(false)
       
-      // Use a more reliable scanning approach
-      const scanFrame = async () => {
-        if (!readerRef.current || !videoRef.current || !isScanning) return
-        
-        try {
-          const result = await readerRef.current.decodeFromVideoElement(videoRef.current)
-          
-          if (result && result.getText()) {
-            const scannedText = result.getText().trim()
-            if (scannedText) {
-              onScan(scannedText)
-              stopScanning()
-              return
-            }
-          }
-        } catch (err) {
-          // Continue scanning - this is normal for ZXing
-        }
-        
-        // Continue scanning
-        if (isScanning && isOpen) {
-          scanningIntervalRef.current = setTimeout(scanFrame, 100)
-        }
+      // Check if video is ready
+      if (videoRef.current.readyState < 1) {
+        console.log('Video not ready, waiting...', videoRef.current.readyState)
+        setTimeout(() => startScanning(), 500)
+        return
       }
       
-      scanFrame()
+      console.log('Starting scan loop...')
+      
+      // Use continuous scanning approach
+      readerRef.current.decodeFromVideoElement(videoRef.current, (result, error) => {
+        if (result) {
+          const scannedText = result.getText().trim()
+          if (scannedText) {
+            console.log('Barcode detected:', scannedText)
+            onScan(scannedText)
+            stopScanning()
+          }
+        }
+      })
       
     } catch (err) {
       console.error('Scanning error:', err)
       setError('Failed to start scanning')
+      setIsInitializing(false)
     }
   }
 
@@ -212,10 +212,11 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError, defau
       videoRef.current.srcObject = null
     }
     
-    // Reset reader
-    if (readerRef.current) {
-      readerRef.current.reset()
-    }
+      // Reset reader
+      if (readerRef.current) {
+        // Note: reset method may not be available in browser version
+        readerRef.current = null
+      }
   }
 
   const handleClose = () => {
@@ -331,6 +332,9 @@ export default function BarcodeScanner({ isOpen, onClose, onScan, onError, defau
                           <span className="visually-hidden">Initializing...</span>
                         </div>
                         <p className="mt-3 mb-0">Initializing camera...</p>
+                        <small className="text-muted">
+                          This may take a few seconds on mobile devices
+                        </small>
                       </div>
                     ) : (
                       <>
