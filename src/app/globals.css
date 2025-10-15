@@ -1,5 +1,4 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
-@import "tailwindcss";
 
 :root {
   --background: #ffffff;
@@ -8,13 +7,6 @@
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --sidebar-bg: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
