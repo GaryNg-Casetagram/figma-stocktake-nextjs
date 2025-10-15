@@ -256,15 +256,15 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
       showNotification('error', `❌ Item "${cleanBarcode}" not found in session. Searching global database...`)
       
       // Enhanced global search with the same matching logic
-      await handleGlobalSearch(cleanBarcode)
+      const searchResults = await handleGlobalSearch(cleanBarcode)
       
       // If we found items in global search, show the first one for preview
-      if (globalSearchResults.length > 0) {
-        console.log('Found items in global search:', globalSearchResults.length)
-        setPreviewItem(globalSearchResults[0])
+      if (searchResults.length > 0) {
+        console.log('Found items in global search:', searchResults.length)
+        setPreviewItem(searchResults[0])
         setPreviewQuantity('1')
         setShowItemPreview(true)
-        showNotification('success', `✅ Found item in global database: ${globalSearchResults[0].sku}`)
+        showNotification('success', `✅ Found item in global database: ${searchResults[0].sku}`)
       } else {
         // No items found, show add modal for manual search
         console.log('No items found in global search')
@@ -278,70 +278,32 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     console.error('Barcode scan error:', error)
   }
 
-  const handleGlobalSearch = async (query: string) => {
+  const handleGlobalSearch = async (query: string): Promise<any[]> => {
     if (!query.trim()) {
       setGlobalSearchResults([])
-      return
+      return []
     }
 
     console.log('Global search for:', query)
     setSearchingGlobal(true)
     try {
-      // Try multiple search strategies
-      const searchQueries = [
-        query, // Original query
-        query.replace(/[^A-Z0-9-]/g, ''), // Clean query
-        query.split('-').join(''), // Remove hyphens
-        query.split('-')[0], // First part only
-        query.split('-').slice(0, 2).join('-'), // First two parts
-      ]
-      
-      let allResults: any[] = []
-      
-      // Search with each query strategy
-      for (const searchQuery of searchQueries) {
-        if (searchQuery.trim()) {
-          try {
-            const response = await fetch(`/api/items/search?q=${encodeURIComponent(searchQuery)}`)
-            if (response.ok) {
-              const data = await response.json()
-              allResults = [...allResults, ...data.items]
-            }
-          } catch (err) {
-            console.log('Search error for query:', searchQuery, err)
-          }
-        }
+      // Single search query - let the API handle multiple strategies
+      const response = await fetch(`/api/items/search?q=${encodeURIComponent(query)}&limit=10`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Global search results:', data.items.length)
+        setGlobalSearchResults(data.items)
+        return data.items
+      } else {
+        console.error('Search API error:', response.status)
+        setGlobalSearchResults([])
+        return []
       }
-      
-      // Remove duplicates and sort by relevance
-      const uniqueResults = allResults.filter((item, index, self) => 
-        index === self.findIndex(t => t.id === item.id)
-      )
-      
-      // Sort by relevance (exact matches first)
-      const sortedResults = uniqueResults.sort((a, b) => {
-        const aSku = a.sku.toUpperCase()
-        const bSku = b.sku.toUpperCase()
-        const cleanQuery = query.toUpperCase()
-        
-        // Exact match gets highest priority
-        if (aSku === cleanQuery) return -1
-        if (bSku === cleanQuery) return 1
-        
-        // Contains match gets second priority
-        if (aSku.includes(cleanQuery) && !bSku.includes(cleanQuery)) return -1
-        if (bSku.includes(cleanQuery) && !aSku.includes(cleanQuery)) return 1
-        
-        // Alphabetical order for ties
-        return aSku.localeCompare(bSku)
-      })
-      
-      console.log('Global search results:', sortedResults.length)
-      setGlobalSearchResults(sortedResults)
-      
     } catch (error) {
       console.error('Global search error:', error)
       showNotification('error', 'Failed to search items')
+      setGlobalSearchResults([])
+      return []
     } finally {
       setSearchingGlobal(false)
     }

@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
       // Remove hyphens and search
       { sku: { contains: cleanQuery.replace(/-/g, ''), mode: 'insensitive' } },
       
-      // Search by parts (for hyphenated SKUs)
-      ...cleanQuery.split('-').map(part => ({
+      // Search by parts (for hyphenated SKUs) - only if part is meaningful
+      ...cleanQuery.split('-').filter(part => part.length > 1).map(part => ({
         sku: { contains: part, mode: 'insensitive' }
       })),
       
@@ -43,10 +43,16 @@ export async function GET(request: NextRequest) {
       { colour: { contains: cleanQuery, mode: 'insensitive' } },
       { colour: { contains: query, mode: 'insensitive' } },
       { caseType: { contains: cleanQuery, mode: 'insensitive' } },
-      { caseType: { contains: query, mode: 'insensitive' } },
-      { description: { contains: cleanQuery, mode: 'insensitive' } },
-      { description: { contains: query, mode: 'insensitive' } }
+      { caseType: { contains: query, mode: 'insensitive' } }
     ]
+
+    // Only add description search if the field exists and query is meaningful
+    if (cleanQuery.length > 3) {
+      searchConditions.push(
+        { description: { contains: cleanQuery, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } }
+      )
+    }
 
     // Remove duplicates from search conditions
     const uniqueConditions = searchConditions.filter((condition, index, self) => 
