@@ -26,6 +26,7 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
   const [notes, setNotes] = useState<string>('')
   const [showModal, setShowModal] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [autoSelectedItem, setAutoSelectedItem] = useState<string | null>(null)
 
   const pendingItems = items.filter(item => item.status === 'pending')
   const verifiedItems = items.filter(item => item.status === 'verified')
@@ -80,10 +81,23 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
     })
     
     if (foundItem) {
+      // Auto-select the item and show success feedback
+      setAutoSelectedItem(foundItem.sku)
       handleItemSelect(foundItem)
+      
+      // Clear auto-selection highlight after 3 seconds
+      setTimeout(() => {
+        setAutoSelectedItem(null)
+      }, 3000)
+      
+      // Show success notification
+      const successMessage = `✅ Item auto-selected: ${foundItem.sku}\n\nOpening verification modal...`
+      setTimeout(() => {
+        alert(successMessage)
+      }, 100) // Small delay to ensure modal is opening
     } else {
       // Show more helpful error message
-      const message = `Barcode "${barcode}" not found in the verification list.\n\nAvailable SKUs:\n${items.map(item => `• ${item.sku}`).join('\n')}\n\nPlease select the item manually.`
+      const message = `❌ Barcode "${barcode}" not found in the verification list.\n\nAvailable SKUs:\n${items.map(item => `• ${item.sku}`).join('\n')}\n\nPlease select the item manually.`
       alert(message)
     }
   }
@@ -177,13 +191,22 @@ export default function ReceivingVerification({ items, onItemVerified }: Receivi
               className={`card card-enhanced h-100 ${
                 item.status === 'verified' ? 'border-success' : 
                 item.status === 'discrepancy' ? 'border-danger' : 'border-warning'
-              }`}
+              } ${autoSelectedItem === item.sku ? 'border-primary border-3 shadow-lg' : ''}`}
               onClick={() => item.status === 'pending' && handleItemSelect(item)}
-              style={{ cursor: item.status === 'pending' ? 'pointer' : 'default' }}
+              style={{ 
+                cursor: item.status === 'pending' ? 'pointer' : 'default',
+                transform: autoSelectedItem === item.sku ? 'scale(1.02)' : 'scale(1)',
+                transition: 'all 0.3s ease'
+              }}
             >
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-start mb-2">
-                  <h6 className="fw-bold mb-0">{item.sku}</h6>
+                  <h6 className="fw-bold mb-0">
+                    {item.sku}
+                    {autoSelectedItem === item.sku && (
+                      <i className="bi bi-check-circle-fill text-primary ms-2" title="Auto-selected via scan"></i>
+                    )}
+                  </h6>
                   <span className={`badge ${
                     item.status === 'verified' ? 'bg-success' : 
                     item.status === 'discrepancy' ? 'bg-danger' : 'bg-warning'

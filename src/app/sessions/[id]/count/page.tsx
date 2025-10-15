@@ -41,6 +41,7 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
   const [quantity, setQuantity] = useState('')
   const [scanMode, setScanMode] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [autoSelectedSku, setAutoSelectedSku] = useState<string | null>(null)
 
   const fetchSession = useCallback(async () => {
     try {
@@ -148,13 +149,26 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
     })
     
     if (foundItem) {
+      // Auto-select the item and show success feedback
+      setAutoSelectedSku(foundItem.item.sku)
       setSelectedItem(foundItem.item)
       setSearchTerm(foundItem.item.sku)
       setQuantity('1') // Default quantity
+      
+      // Clear auto-selection highlight after 3 seconds
+      setTimeout(() => {
+        setAutoSelectedSku(null)
+      }, 3000)
+      
+      // Show success notification
+      const successMessage = `✅ Item auto-selected: ${foundItem.item.sku}\n\nReady to count! Quantity set to 1.\n\nAdjust quantity if needed and click "Add Count".`
+      setTimeout(() => {
+        alert(successMessage)
+      }, 100) // Small delay to ensure UI updates
     } else {
       // Show more helpful error message
       const availableSkus = session.items.map(si => si.item.sku).join(', ')
-      alert(`Barcode "${barcode}" not found in this session.\n\nAvailable SKUs: ${availableSkus}\n\nPlease select item manually.`)
+      alert(`❌ Barcode "${barcode}" not found in this session.\n\nAvailable SKUs: ${availableSkus}\n\nPlease select item manually.`)
     }
   }
 
@@ -316,8 +330,17 @@ export default function CountPage({ params }: { params: Promise<{ id: string }> 
               <div className="card-body">
                 {selectedItem ? (
                   <div className="d-grid gap-3">
-                    <div className="bg-light p-3 rounded-3">
-                      <h5 className="fw-medium mb-1">{selectedItem.sku}</h5>
+                    <div className={`p-3 rounded-3 ${
+                      autoSelectedSku === selectedItem.sku 
+                        ? 'bg-primary bg-opacity-10 border border-primary border-2' 
+                        : 'bg-light'
+                    }`}>
+                      <h5 className="fw-medium mb-1">
+                        {selectedItem.sku}
+                        {autoSelectedSku === selectedItem.sku && (
+                          <i className="bi bi-check-circle-fill text-primary ms-2" title="Auto-selected via scan"></i>
+                        )}
+                      </h5>
                       <p className="text-muted small mb-0">
                         {selectedItem.deviceType} - {selectedItem.colour} - {selectedItem.caseType}
                       </p>
